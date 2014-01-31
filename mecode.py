@@ -13,8 +13,8 @@ import math
 ### GCode Aliases
 ###############################################################################
 
-def set_home(X=0, Y=0, **kwargs):
-    args = _format_args(X, Y, kwargs)
+def set_home(x=0, y=0, **kwargs):
+    args = _format_args(x, y, kwargs)
     write('G92 ' + args)
 
 
@@ -22,8 +22,8 @@ def reset_home():
     write('G92.1')
 
 
-def move(X=None, Y=None, **kwargs):
-    args = _format_args(X, Y, kwargs)
+def move(x=None, y=None, **kwargs):
+    args = _format_args(x, y, kwargs)
     write('G1 ' + args)
 
 
@@ -51,60 +51,60 @@ def home():
     write('G91')
 
 
-def abs_move(X=None, Y=None, **kwargs):
+def abs_move(x=None, y=None, **kwargs):
     write('G90')
-    move(X=X, Y=Y, **kwargs)
+    move(x=x, y=y, **kwargs)
     write('G91')
 
 
-def rect(X, Y, direction='CW'):
+def rect(x, y, direction='CW'):
     """ Trace a rectangle with the given width and height.
 
     Parameters
     ----------
-    X : float
-        The width of the rectange in the X dimension.
-    Y : float
-        The heigh of the rectangle in the Y dimension.
+    x : float
+        The width of the rectange in the x dimension.
+    y : float
+        The heigh of the rectangle in the y dimension.
     direction : either 'CW' or 'CCW'
         Whether to draw the rectangle clockwise or counter clockwise.
 
     """
     if direction == 'CW':
-        move(Y=Y)
-        move(X=X)
-        move(Y=-Y)
-        move(X=-X)
+        move(y=y)
+        move(x=x)
+        move(y=-y)
+        move(x=-x)
     else:
-        move(X=X)
-        move(Y=Y)
-        move(X=-X)
-        move(Y=-Y)
+        move(x=x)
+        move(y=y)
+        move(x=-x)
+        move(y=-y)
 
 
-def meander(X, Y, spacing, orientation='X'):
+def meander(x, y, spacing, orientation='x'):
     """ Infill a rectangle with a square wave meandering pattern. If the
     relevant dimension is not a multiple of the spacing, the spacing will be
     tweaked to ensure the dimensions work out.
 
     Parameters
     ----------
-    X : float
-        The width of the rectangle in the X dimension.
-    Y : float
-        The heigh of the rectangle in the Y dimension.
+    x : float
+        The width of the rectangle in the x dimension.
+    y : float
+        The heigh of the rectangle in the y dimension.
     spacing : float
         The space between parallel meander lines.
-    orientation : str ('X' or 'Y')
+    orientation : str ('x' or 'y')
 
     """
     # Major axis is the parallel lines, minor axis is the jog.
-    if orientation == 'X':
-        major, major_name = X, 'X'
-        minor, minor_name = Y, 'Y'
+    if orientation == 'x':
+        major, major_name = x, 'x'
+        minor, minor_name = y, 'y'
     else:
-        major, major_name = Y, 'Y'
-        minor, minor_name = X, 'X'
+        major, major_name = y, 'y'
+        minor, minor_name = x, 'x'
 
     if minor > 0:
         passes = math.ceil(minor / spacing)
@@ -142,12 +142,12 @@ def write(statement):
     print statement
 
 
-def _format_args(X, Y, kwargs):
+def _format_args(x, y, kwargs):
     args = []
-    if X is not None:
-        args.append('X{}'.format(X))
-    if Y is not None:
-        args.append('Y{}'.format(Y))
+    if x is not None:
+        args.append('X{}'.format(x))
+    if y is not None:
+        args.append('Y{}'.format(y))
     args += ['{}{}'.format(k, v) for k, v in kwargs.items()]
     args = ' '.join(args)
     return args
@@ -157,4 +157,4 @@ if __name__ == '__main__':
     setup()
     home()
     move(10, 10)
-    meander(10, -5, .2004, 'Y')
+    meander(10, -5, .2004, 'y')
