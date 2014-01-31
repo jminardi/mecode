@@ -13,13 +13,13 @@ import math
 ### GCode Aliases
 ###############################################################################
 
-def home():
-    write('G1 X0 Y0')
-
-
 def set_home(X=0, Y=0, **kwargs):
     args = _format_args(X, Y, kwargs)
     write('G92 ' + args)
+
+
+def reset_home():
+    write('G92.1')
 
 
 def line(X=None, Y=None, **kwargs):
@@ -31,6 +31,10 @@ def feed(rate):
     write('F{}'.format(rate))
 
 
+def dwell(time):
+    write('G4 P{}'.format(time))
+
+
 ###############################################################################
 ### Composed Functions
 ###############################################################################
@@ -38,6 +42,12 @@ def feed(rate):
 def setup():
     """ Set the environment into a consistent state to start off.
     """
+    write('G91')  # start off in relative mode.
+
+
+def home():
+    write('G90')
+    write('G1 X0 Y0')
     write('G91')
 
 
@@ -110,6 +120,18 @@ def meander(X, Y, spacing, orientation='X'):
         line(**{major_name: (sign * major)})
         line(**{minor_name: spacing})
         sign = -1 * sign
+
+
+###############################################################################
+### AeroTech Specific Functions
+###############################################################################
+
+def toggle_pressure(com_port):
+    write('Call togglePress P{}'.format(com_port))
+
+
+def set_pressure(com_port, value):
+    write('Call setPress P{} Q{}'.format(com_port, value))
 
 
 ###############################################################################
