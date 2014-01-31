@@ -134,6 +134,10 @@ def set_pressure(com_port, value):
     write('Call setPress P{} Q{}'.format(com_port, value))
 
 
+def set_valve(num, value):
+    write('$DO{}.0={}'.format(num, value))
+
+
 ###############################################################################
 ### Private Interface
 ###############################################################################
