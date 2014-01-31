@@ -22,7 +22,7 @@ def reset_home():
     write('G92.1')
 
 
-def line(X=None, Y=None, **kwargs):
+def move(X=None, Y=None, **kwargs):
     args = _format_args(X, Y, kwargs)
     write('G1 ' + args)
 
@@ -51,9 +51,9 @@ def home():
     write('G91')
 
 
-def abs_line(X=None, Y=None, **kwargs):
+def abs_move(X=None, Y=None, **kwargs):
     write('G90')
-    line(X=X, Y=Y, **kwargs)
+    move(X=X, Y=Y, **kwargs)
     write('G91')
 
 
@@ -71,15 +71,15 @@ def rect(X, Y, direction='CW'):
 
     """
     if direction == 'CW':
-        line(Y=Y)
-        line(X=X)
-        line(Y=-Y)
-        line(X=-X)
+        move(Y=Y)
+        move(X=X)
+        move(Y=-Y)
+        move(X=-X)
     else:
-        line(X=X)
-        line(Y=Y)
-        line(X=-X)
-        line(Y=-Y)
+        move(X=X)
+        move(Y=Y)
+        move(X=-X)
+        move(Y=-Y)
 
 
 def meander(X, Y, spacing, orientation='X'):
@@ -117,8 +117,8 @@ def meander(X, Y, spacing, orientation='X'):
     spacing = actual_spacing
     sign = 1
     for _ in range(int(passes)):
-        line(**{major_name: (sign * major)})
-        line(**{minor_name: spacing})
+        move(**{major_name: (sign * major)})
+        move(**{minor_name: spacing})
         sign = -1 * sign
 
 
@@ -156,5 +156,5 @@ def _format_args(X, Y, kwargs):
 if __name__ == '__main__':
     setup()
     home()
-    line(10, 10)
+    move(10, 10)
     meander(10, -5, .2004, 'Y')
