@@ -57,6 +57,37 @@ def abs_move(x=None, y=None, **kwargs):
     write('G91')
 
 
+def arc(direction='CW', radius=1, **kwargs):
+    """ Arc to the given point with the given radius and in the given direction
+
+    Parameters
+    ----------
+    points : strs
+        Must specify two points as kwargs, e.g. X=5, Y=5
+    direction : str (either 'CW' or 'CCW')
+        The direction to execute the arc in.
+    radius : float
+        The radius of the arc.
+
+    """
+    dimensions = [k.lower() for k in kwargs.keys()]
+    if 'x' in dimensions and 'y' in dimensions:
+        plane_selector = 'G17'  # XY plane
+    elif 'x' in dimensions:
+        plane_selector = 'G18'  # XZ plane
+    elif 'y' in dimensions:
+        plane_selector = 'G19'  # YZ plane
+
+    if direction == 'CW':
+        command = 'G2'
+    elif direction == 'CCW':
+        command = 'G3'
+    args = ' '.join([(k + str(v)) for k, v in kwargs.items()])
+    write(plane_selector)
+    write('{} {} R{}'.format(command, args, radius))
+    write('G17')  # always return back to the default XY plane.
+
+
 def rect(x, y, direction='CW'):
     """ Trace a rectangle with the given width and height.
 
@@ -160,5 +191,4 @@ def _format_args(x, y, kwargs):
 if __name__ == '__main__':
     setup()
     home()
-    move(10, 10)
-    meander(10, -5, .2004, 'y')
+    arc(x=0, z=10, radius=5)
