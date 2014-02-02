@@ -82,6 +82,7 @@ def arc(direction='CW', radius=1, **kwargs):
         command = 'G2'
     elif direction == 'CCW':
         command = 'G3'
+
     args = ' '.join([(k + str(v)) for k, v in kwargs.items()])
     write(plane_selector)
     write('{} {} R{}'.format(command, args, radius))
@@ -153,6 +154,32 @@ def meander(x, y, spacing, orientation='x'):
         sign = -1 * sign
 
 
+def clip(axis='z', direction='+x', height=4):
+    """ Move the given axis up to the given height while arcing in the given
+    direction.
+
+    Parameters
+    ----------
+    axis : str
+        The axis to move, e.g. 'z'
+    direction : str (either +-x or +-y)
+        The direction to arc through
+    height : float
+        The height to end up at
+
+    """
+    axis = direction[1]
+    orientation = 'CW' if direction[0] == '-' else 'CCW'
+    radius = height / 2.0
+    kwargs = {
+        axis: 0,
+        'z': height,
+        'direction': orientation,
+        'radius': radius,
+    }
+    arc(**kwargs)
+
+
 ###############################################################################
 ### AeroTech Specific Functions
 ###############################################################################
@@ -191,4 +218,4 @@ def _format_args(x, y, kwargs):
 if __name__ == '__main__':
     setup()
     home()
-    arc(x=0, z=10, radius=5)
+    clip(direction='-x')
