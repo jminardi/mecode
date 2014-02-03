@@ -77,13 +77,16 @@ def arc(direction='CW', radius=1, **kwargs):
         plane_selector = 'G18'  # XZ plane
     elif 'y' in dimensions:
         plane_selector = 'G19'  # YZ plane
+    else:
+        msg = 'Must specify point in 2D as kw arg, e.g. X=10, Y=10'
+        raise RuntimeError(msg)
 
     if direction == 'CW':
         command = 'G2'
     elif direction == 'CCW':
         command = 'G3'
 
-    args = ' '.join([(k + str(v)) for k, v in kwargs.items()])
+    args = ' '.join([(k.upper() + str(v)) for k, v in kwargs.items()])
     write(plane_selector)
     write('{} {} R{}'.format(command, args, radius))
     write('G17')  # always return back to the default XY plane.
