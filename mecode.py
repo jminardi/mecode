@@ -7,13 +7,17 @@ function that uses absolute mode always resets back to relative.
 """
 
 import math
+import os
+
+HERE = os.path.dirname(__file__)
+out_file = None
 
 
 ###############################################################################
 ### GCode Aliases
 ###############################################################################
 
-def set_home(x=0, y=0, **kwargs):
+def set_home(x=None, y=None, **kwargs):
     args = _format_args(x, y, kwargs)
     write('G92 ' + args)
 
@@ -42,7 +46,18 @@ def dwell(time):
 def setup():
     """ Set the environment into a consistent state to start off.
     """
+    global out_file
+    out_file = open("C:\Users\Lewis Group\Documents\GitHub\Muscular-Thin-Films\MTF_out.pgm", 'w')
+    lines = open(os.path.join(HERE, 'header.txt')).readlines()
+    out_file.writelines(lines)
+    out_file.write('\n')
     write('G91')  # start off in relative mode.
+    
+    
+def teardown():
+    lines = open(os.path.join(HERE, 'footer.txt')).readlines()
+    out_file.writelines(lines)
+    out_file.close()
 
 
 def home():
@@ -205,6 +220,7 @@ def set_valve(num, value):
 
 def write(statement):
     print statement
+    out_file.write(statement + '\n')
 
 
 def _format_args(x, y, kwargs):
@@ -219,6 +235,7 @@ def _format_args(x, y, kwargs):
 
 
 if __name__ == '__main__':
+    print '!!!!!!', 
     setup()
     home()
     clip(direction='-x')

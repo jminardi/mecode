@@ -1,0 +1,10 @@
+DVAR $hFile
+DVAR $cCheck
+DVAR $press
+DVAR $length
+DVAR $lame
+Primary ; sets primary units mm and s
+G65 F2000; accel speed mm/s^2
+G66 F2000;accel speed mm/s^2
+ENABLE X Y A B C D U
+POSOFFSET CLEAR X Y U A B C D
