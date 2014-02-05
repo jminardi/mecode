@@ -18,6 +18,16 @@ HERE = os.path.dirname(__file__)
 class MeCode(object):
 
     def __init__(self, outfile=None, print_lines=True):
+        """
+        Parameters
+        ----------
+        outfile : bool or path
+            If a path is specified, the compiled gcode will be writen to that
+            file.
+        print_lines : bool
+            Whether or not to print the compiled GCode to stdout
+
+        """
         if outfile is not None:
             outfile = open(outfile, 'w')
             lines = open(os.path.join(HERE, 'header.txt')).readlines()
