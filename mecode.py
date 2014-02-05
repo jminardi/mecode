@@ -1,8 +1,11 @@
-"""
-mecode is a collection of functions desiged to simplify generation of GCode.
+""" mecode is a collection of functions desiged to simplify GCode generation.
 
 Relative movements are assumed, unless stated in the function name. Any
-function that uses absolute mode always resets back to relative.
+function that uses absolute mode always resets back to relative. Similarly, the
+arcing plane is always reset to XY after arcing through a different plane.
+
+Author: Jack Minardi
+Email: jminardi@seas.harvard.edu
 
 """
 
@@ -10,232 +13,218 @@ import math
 import os
 
 HERE = os.path.dirname(__file__)
-out_file = None
 
 
-###############################################################################
-### GCode Aliases
-###############################################################################
+class MeCode(object):
 
-def set_home(x=None, y=None, **kwargs):
-    args = _format_args(x, y, kwargs)
-    write('G92 ' + args)
+    def __init__(self, outfile=None, print_lines=True):
+        if outfile is not None:
+            outfile = open(outfile, 'w')
+            lines = open(os.path.join(HERE, 'header.txt')).readlines()
+            outfile.writelines(lines)
+            outfile.write('\n')
+        self.outfile = outfile
+        self.print_lines = print_lines
+        self.setup()
 
+    ### GCode Aliases  ########################################################
 
-def reset_home():
-    write('G92.1')
+    def set_home(self, x=None, y=None, **kwargs):
+        args = self._format_args(x, y, kwargs)
+        self.write('G92 ' + args)
 
+    def reset_home(self):
+        self.write('G92.1')
 
-def move(x=None, y=None, **kwargs):
-    args = _format_args(x, y, kwargs)
-    write('G1 ' + args)
+    def move(self, x=None, y=None, **kwargs):
+        args = self._format_args(x, y, kwargs)
+        self.write('G1 ' + args)
 
+    def feed(self, rate):
+        self.write('F{}'.format(rate))
 
-def feed(rate):
-    write('F{}'.format(rate))
+    def dwell(self, time):
+        self.write('G4 P{}'.format(time))
 
+    ### Composed Functions  ###################################################
 
-def dwell(time):
-    write('G4 P{}'.format(time))
+    def setup(self, outfile=None):
+        """ Set the environment into a consistent state to start off.
+        """
+        self.write('G91')  # start off in relative mode.
 
+    def teardown(self):
+        """ Close the outfile file after writing the footer if opened.
+        """
+        if self.outfile is not None:
+            lines = open(os.path.join(HERE, 'footer.txt')).readlines()
+            self.outfile.writelines(lines)
+            self.outfile.close()
 
-###############################################################################
-### Composed Functions
-###############################################################################
+    def home(self):
+        self.write('G90')
+        self.write('G1 X0 Y0')
+        self.write('G91')
 
-def setup():
-    """ Set the environment into a consistent state to start off.
-    """
-    global out_file
-    out_file = open("C:\Users\Lewis Group\Documents\GitHub\Muscular-Thin-Films\MTF_out.pgm", 'w')
-    lines = open(os.path.join(HERE, 'header.txt')).readlines()
-    out_file.writelines(lines)
-    out_file.write('\n')
-    write('G91')  # start off in relative mode.
-    
-    
-def teardown():
-    lines = open(os.path.join(HERE, 'footer.txt')).readlines()
-    out_file.writelines(lines)
-    out_file.close()
+    def abs_move(self, x=None, y=None, **kwargs):
+        self.write('G90')
+        self.move(x=x, y=y, **kwargs)
+        self.write('G91')
 
+    def arc(self, direction='CW', radius=1, **kwargs):
+        """ Arc to the given point with the given radius and in the given
+        direction
 
-def home():
-    write('G90')
-    write('G1 X0 Y0')
-    write('G91')
+        Parameters
+        ----------
+        points : strs
+            Must specify two points as kwargs, e.g. X=5, Y=5
+        direction : str (either 'CW' or 'CCW')
+            The direction to execute the arc in.
+        radius : float
+            The radius of the arc.
 
+        """
+        dimensions = [k.lower() for k in kwargs.keys()]
+        if 'x' in dimensions and 'y' in dimensions:
+            plane_selector = 'G17'  # XY plane
+        elif 'x' in dimensions:
+            plane_selector = 'G18'  # XZ plane
+        elif 'y' in dimensions:
+            plane_selector = 'G19'  # YZ plane
+        else:
+            msg = 'Must specify point in 2D as kw arg, e.g. X=10, Y=10'
+            raise RuntimeError(msg)
 
-def abs_move(x=None, y=None, **kwargs):
-    write('G90')
-    move(x=x, y=y, **kwargs)
-    write('G91')
+        if direction == 'CW':
+            command = 'G2'
+        elif direction == 'CCW':
+            command = 'G3'
 
+        args = ' '.join([(k.upper() + str(v)) for k, v in kwargs.items()])
+        self.write(plane_selector)
+        self.write('{} {} R{}'.format(command, args, radius))
+        self.write('G17')  # always return back to the default XY plane.
 
-def arc(direction='CW', radius=1, **kwargs):
-    """ Arc to the given point with the given radius and in the given direction
+    def rect(self, x, y, direction='CW'):
+        """ Trace a rectangle with the given width and height.
 
-    Parameters
-    ----------
-    points : strs
-        Must specify two points as kwargs, e.g. X=5, Y=5
-    direction : str (either 'CW' or 'CCW')
-        The direction to execute the arc in.
-    radius : float
-        The radius of the arc.
+        Parameters
+        ----------
+        x : float
+            The width of the rectange in the x dimension.
+        y : float
+            The heigh of the rectangle in the y dimension.
+        direction : either 'CW' or 'CCW'
+            Whether to draw the rectangle clockwise or counter clockwise.
 
-    """
-    dimensions = [k.lower() for k in kwargs.keys()]
-    if 'x' in dimensions and 'y' in dimensions:
-        plane_selector = 'G17'  # XY plane
-    elif 'x' in dimensions:
-        plane_selector = 'G18'  # XZ plane
-    elif 'y' in dimensions:
-        plane_selector = 'G19'  # YZ plane
-    else:
-        msg = 'Must specify point in 2D as kw arg, e.g. X=10, Y=10'
-        raise RuntimeError(msg)
+        """
+        if direction == 'CW':
+            self.move(y=y)
+            self.move(x=x)
+            self.move(y=-y)
+            self.move(x=-x)
+        else:
+            self.move(x=x)
+            self.move(y=y)
+            self.move(x=-x)
+            self.move(y=-y)
 
-    if direction == 'CW':
-        command = 'G2'
-    elif direction == 'CCW':
-        command = 'G3'
+    def meander(self, x, y, spacing, orientation='x'):
+        """ Infill a rectangle with a square wave meandering pattern. If the
+        relevant dimension is not a multiple of the spacing, the spacing will
+        be tweaked to ensure the dimensions work out.
 
-    args = ' '.join([(k.upper() + str(v)) for k, v in kwargs.items()])
-    write(plane_selector)
-    write('{} {} R{}'.format(command, args, radius))
-    write('G17')  # always return back to the default XY plane.
+        Parameters
+        ----------
+        x : float
+            The width of the rectangle in the x dimension.
+        y : float
+            The heigh of the rectangle in the y dimension.
+        spacing : float
+            The space between parallel meander lines.
+        orientation : str ('x' or 'y')
 
+        """
+        # Major axis is the parallel lines, minor axis is the jog.
+        if orientation == 'x':
+            major, major_name = x, 'x'
+            minor, minor_name = y, 'y'
+        else:
+            major, major_name = y, 'y'
+            minor, minor_name = x, 'x'
 
-def rect(x, y, direction='CW'):
-    """ Trace a rectangle with the given width and height.
+        if minor > 0:
+            passes = math.ceil(minor / spacing)
+        else:
+            passes = abs(math.floor(minor / spacing))
+        actual_spacing = minor / passes
+        if actual_spacing != spacing:
+            msg = ';WARNING! meander spacing updated from {} to {}'
+            self.write(msg.format(spacing, actual_spacing))
+        spacing = actual_spacing
+        sign = 1
+        for _ in range(int(passes)):
+            self.move(**{major_name: (sign * major)})
+            self.move(**{minor_name: spacing})
+            sign = -1 * sign
 
-    Parameters
-    ----------
-    x : float
-        The width of the rectange in the x dimension.
-    y : float
-        The heigh of the rectangle in the y dimension.
-    direction : either 'CW' or 'CCW'
-        Whether to draw the rectangle clockwise or counter clockwise.
+    def clip(self, axis='z', direction='+x', height=4):
+        """ Move the given axis up to the given height while arcing in the
+        given direction.
 
-    """
-    if direction == 'CW':
-        move(y=y)
-        move(x=x)
-        move(y=-y)
-        move(x=-x)
-    else:
-        move(x=x)
-        move(y=y)
-        move(x=-x)
-        move(y=-y)
+        Parameters
+        ----------
+        axis : str
+            The axis to move, e.g. 'z'
+        direction : str (either +-x or +-y)
+            The direction to arc through
+        height : float
+            The height to end up at
 
+        """
+        axis = direction[1]
+        orientation = 'CW' if direction[0] == '-' else 'CCW'
+        radius = height / 2.0
+        kwargs = {
+            axis: 0,
+            'z': height,
+            'direction': orientation,
+            'radius': radius,
+        }
+        self.arc(**kwargs)
 
-def meander(x, y, spacing, orientation='x'):
-    """ Infill a rectangle with a square wave meandering pattern. If the
-    relevant dimension is not a multiple of the spacing, the spacing will be
-    tweaked to ensure the dimensions work out.
+    ### AeroTech Specific Functions  ##########################################
 
-    Parameters
-    ----------
-    x : float
-        The width of the rectangle in the x dimension.
-    y : float
-        The heigh of the rectangle in the y dimension.
-    spacing : float
-        The space between parallel meander lines.
-    orientation : str ('x' or 'y')
+    def toggle_pressure(self, com_port):
+        self.write('Call togglePress P{}'.format(com_port))
 
-    """
-    # Major axis is the parallel lines, minor axis is the jog.
-    if orientation == 'x':
-        major, major_name = x, 'x'
-        minor, minor_name = y, 'y'
-    else:
-        major, major_name = y, 'y'
-        minor, minor_name = x, 'x'
+    def set_pressure(self, com_port, value):
+        self.write('Call setPress P{} Q{}'.format(com_port, value))
 
-    if minor > 0:
-        passes = math.ceil(minor / spacing)
-    else:
-        passes = abs(math.floor(minor / spacing))
-    actual_spacing = minor / passes
-    if actual_spacing != spacing:
-        msg = ';WARNING! meander spacing updated from {} to {}'
-        write(msg.format(spacing, actual_spacing))
-    spacing = actual_spacing
-    sign = 1
-    for _ in range(int(passes)):
-        move(**{major_name: (sign * major)})
-        move(**{minor_name: spacing})
-        sign = -1 * sign
+    def set_valve(self, num, value):
+        self.write('$DO{}.0={}'.format(num, value))
 
+    ### Private Interface  ####################################################
 
-def clip(axis='z', direction='+x', height=4):
-    """ Move the given axis up to the given height while arcing in the given
-    direction.
+    def write(self, statement):
+        if self.print_lines:
+            print statement
+        if self.outfile is not None:
+            self.outfile.write(statement + '\n')
 
-    Parameters
-    ----------
-    axis : str
-        The axis to move, e.g. 'z'
-    direction : str (either +-x or +-y)
-        The direction to arc through
-    height : float
-        The height to end up at
-
-    """
-    axis = direction[1]
-    orientation = 'CW' if direction[0] == '-' else 'CCW'
-    radius = height / 2.0
-    kwargs = {
-        axis: 0,
-        'z': height,
-        'direction': orientation,
-        'radius': radius,
-    }
-    arc(**kwargs)
-
-
-###############################################################################
-### AeroTech Specific Functions
-###############################################################################
-
-def toggle_pressure(com_port):
-    write('Call togglePress P{}'.format(com_port))
-
-
-def set_pressure(com_port, value):
-    write('Call setPress P{} Q{}'.format(com_port, value))
-
-
-def set_valve(num, value):
-    write('$DO{}.0={}'.format(num, value))
-
-
-###############################################################################
-### Private Interface
-###############################################################################
-
-def write(statement):
-    print statement
-    out_file.write(statement + '\n')
-
-
-def _format_args(x, y, kwargs):
-    args = []
-    if x is not None:
-        args.append('X{}'.format(x))
-    if y is not None:
-        args.append('Y{}'.format(y))
-    args += ['{}{}'.format(k, v) for k, v in kwargs.items()]
-    args = ' '.join(args)
-    return args
+    def _format_args(self, x, y, kwargs):
+        args = []
+        if x is not None:
+            args.append('X{}'.format(x))
+        if y is not None:
+            args.append('Y{}'.format(y))
+        args += ['{}{}'.format(k, v) for k, v in kwargs.items()]
+        args = ' '.join(args)
+        return args
 
 
 if __name__ == '__main__':
-    print '!!!!!!', 
-    setup()
-    home()
-    clip(direction='-x')
+    g = MeCode()
+    g.meander(10, 10, .5)
+    g.teardown()
