@@ -28,14 +28,8 @@ class MeCode(object):
             Whether or not to print the compiled GCode to stdout
 
         """
-        if outfile is not None:
-            outfile = open(outfile, 'w')
-            lines = open(os.path.join(HERE, 'header.txt')).readlines()
-            outfile.writelines(lines)
-            outfile.write('\n')
         self.outfile = outfile
         self.print_lines = print_lines
-        self.setup()
 
     ### GCode Aliases  ########################################################
 
@@ -61,6 +55,13 @@ class MeCode(object):
     def setup(self, outfile=None):
         """ Set the environment into a consistent state to start off.
         """
+        outfile = self.outfile
+        if outfile is not None:
+            outfile = open(outfile, 'w')
+            self.outfile = outfile
+            lines = open(os.path.join(HERE, 'header.txt')).readlines()
+            outfile.writelines(lines)
+            outfile.write('\n')
         self.write('G91')  # start off in relative mode.
 
     def teardown(self):
@@ -79,6 +80,11 @@ class MeCode(object):
     def abs_move(self, x=None, y=None, **kwargs):
         self.write('G90')
         self.move(x=x, y=y, **kwargs)
+        self.write('G91')
+
+    def abs_arc(self, direction='CW', radius=1, **kwargs):
+        self.write('G90')
+        self.arc(direction=direction, radius=radius, **kwargs)
         self.write('G91')
 
     def arc(self, direction='CW', radius=1, **kwargs):
