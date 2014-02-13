@@ -11,6 +11,7 @@ Email: jminardi@seas.harvard.edu
 
 import math
 import os
+from collections import defaultdict
 
 HERE = os.path.dirname(__file__)
 
@@ -31,18 +32,35 @@ class MeCode(object):
         self.outfile = outfile
         self.print_lines = print_lines
 
+        self.current_position = defaultdict(int)
+
     ### GCode Aliases  ########################################################
 
     def set_home(self, x=None, y=None, **kwargs):
         args = self._format_args(x, y, kwargs)
         self.write('G92 ' + args)
 
+        if x:
+            self.current_position[x] = x
+        if y:
+            self.current_position[y] = y
+        for dimention, delta in kwargs.iteritems():
+            self.current_position[dimention] = delta
+
     def reset_home(self):
+        # FIXME This does not work with internal current_position
         self.write('G92.1')
 
     def move(self, x=None, y=None, **kwargs):
         args = self._format_args(x, y, kwargs)
         self.write('G1 ' + args)
+
+        if x:
+            self.current_position[x] += x
+        if y:
+            self.current_position[y] += y
+        for dimention, delta in kwargs.iteritems():
+            self.current_position[dimention] += delta
 
     def feed(self, rate):
         self.write('F{}'.format(rate))
@@ -73,9 +91,7 @@ class MeCode(object):
             self.outfile.close()
 
     def home(self):
-        self.write('G90')
-        self.write('G1 X0 Y0')
-        self.write('G91')
+        self.abs_move(x=0, y=0)
 
     def abs_move(self, x=None, y=None, **kwargs):
         self.write('G90')
@@ -121,6 +137,9 @@ class MeCode(object):
         self.write(plane_selector)
         self.write('{} {} R{}'.format(command, args, radius))
         self.write('G17')  # always return back to the default XY plane.
+
+        for dimension, delta in kwargs.items():
+            self.current_position[dimension] += delta
 
     def rect(self, x, y, direction='CW'):
         """ Trace a rectangle with the given width and height.
@@ -199,12 +218,15 @@ class MeCode(object):
             The height to end up at
 
         """
-        axis = direction[1]
-        orientation = 'CW' if direction[0] == '-' else 'CCW'
+        secondary_axis = direction[1]
+        if height > 0:
+            orientation = 'CW' if direction[0] == '-' else 'CCW'
+        else:
+            orientation = 'CCW' if direction[0] == '-' else 'CW'
         radius = height / 2.0
         kwargs = {
-            axis: 0,
-            'z': height,
+            secondary_axis: 0,
+            axis: height,
             'direction': orientation,
             'radius': radius,
         }
