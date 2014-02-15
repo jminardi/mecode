@@ -75,7 +75,7 @@ class MeCode(object):
         """
         outfile = self.outfile
         if outfile is not None:
-            outfile = open(outfile, 'w')
+            outfile = open(outfile, 'w+')
             self.outfile = outfile
             lines = open(os.path.join(HERE, 'header.txt')).readlines()
             outfile.writelines(lines)
