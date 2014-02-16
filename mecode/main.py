@@ -13,12 +13,18 @@ import math
 import os
 from collections import defaultdict
 
-HERE = os.path.dirname(__file__)
+from scipy.interpolate import griddata
+
+from mecode.profilometer_parse import load_and_curate
+
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 class MeCode(object):
 
-    def __init__(self, outfile=None, print_lines=True):
+    def __init__(self, outfile=None, print_lines=True,
+                 calfile=os.path.join(HERE, 'prof_dump.txt'),
+                 cal_axis='A'):
         """
         Parameters
         ----------
@@ -27,10 +33,17 @@ class MeCode(object):
             file.
         print_lines : bool
             Whether or not to print the compiled GCode to stdout
+        calfile : path
+            Path to a calibration file, or None.
 
         """
         self.outfile = outfile
         self.print_lines = print_lines
+
+        if calfile is not None:
+            self.cal_data = load_and_curate(calfile)
+        else:
+            self.cal_data = None
 
         self.current_position = defaultdict(int)
 
@@ -41,9 +54,9 @@ class MeCode(object):
         self.write('G92 ' + args)
 
         if x:
-            self.current_position[x] = x
+            self.current_position['x'] = x
         if y:
-            self.current_position[y] = y
+            self.current_position['y'] = y
         for dimention, delta in kwargs.iteritems():
             self.current_position[dimention] = delta
 
@@ -52,15 +65,24 @@ class MeCode(object):
         self.write('G92.1')
 
     def move(self, x=None, y=None, **kwargs):
-        args = self._format_args(x, y, kwargs)
-        self.write('G1 ' + args)
-
         if x:
-            self.current_position[x] += x
+            self.current_position['x'] += x
         if y:
-            self.current_position[y] += y
+            self.current_position['y'] += y
         for dimention, delta in kwargs.iteritems():
             self.current_position[dimention] += delta
+
+        if self.cal_data is not None:
+            cal_axis = self.cal_axis
+            x, y = self.current_position['x'], self.current_position['y']
+            delta = self.interpolate(x, y)
+            if cal_axis in kwargs:
+                kwargs[cal_axis] += delta
+            else:
+                kwargs[cal_axis] = delta
+
+        args = self._format_args(x, y, kwargs)
+        self.write('G1 ' + args)
 
     def feed(self, rate):
         self.write('F{}'.format(rate))
@@ -244,6 +266,12 @@ class MeCode(object):
         self.write('$DO{}.0={}'.format(num, value))
 
     ### Private Interface  ####################################################
+
+    def interpolate(self, x, y):
+        cal_data = self.cal_data
+        delta = griddata((cal_data[:, 0], cal_data[:, 1]), cal_data[:, 2],
+                         (x, y), method='cubic')
+        return delta
 
     def write(self, statement):
         if self.print_lines:
