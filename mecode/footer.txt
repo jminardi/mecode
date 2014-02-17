@@ -109,3 +109,208 @@ DFS togglePress
         G4 P0.15
 
 ENDDFS
+
+DFS alignNozzle
+
+	$zStart = $Q
+	$delta = $R
+	$nozzle = $L
+	$floor = $I
+	$deltafast = $J
+
+	$Ax = 483
+	$Ay = 317
+	$Bx = 379
+	$By = 317
+	$Cx = 275
+	$Cy = 317
+	$Dx = 196
+	$Dy = 317
+	$Px = 148
+	$Py = 345
+	
+	$comport = FILEOPEN "COM8", 2
+	COMMINIT $comport, "baud=115200 parity=N data=8 stop=1" ; Initialize comport
+	COMMSETTIMEOUT $comport, -1, 0, 0
+	
+	G90
+	G1 A-0.5 B-0.5 C-0.5 D-0.5 F$fastfeed
+	IF $nozzle = 1
+		$xStart = $Ax
+		$yStart = $Ay
+		G1 X$xStart Y$yStart
+		G1 A$zStart
+	ELSE IF $nozzle = 2
+		$xStart = $Bx
+		$yStart = $By
+		G1 X$xStart Y$yStart
+		G1 B$zStart
+	ELSE IF $nozzle = 3
+		$xStart = $Cx
+		$yStart = $Cy
+		G1 X$xStart Y$yStart
+		G1 C$zStart
+	ELSE IF $nozzle = 4
+		$xStart = $Dx
+		$yStart = $Dy
+		G1 X$xStart Y$yStart
+		G1 D$zStart
+	ELSE IF $nozzle = 5
+		$xStart = $Px
+		$yStart = $Py
+		G1 X$xStart Y$yStart
+		G1 D$zStart
+	ELSE 
+		G1 A-1 B-1 C-1 D-1
+	ENDIF
+	G91
+
+
+	$found = 0
+	WHILE $found != -1
+	
+		FILEWRITE $comport "M0,0"
+		FILEREAD $comport 0 $strglob0	
+		$found = STRFIND($strglob0, "--", 1)
+		IF $nozzle == 1
+			$posZ = AXISSTATUS(A, DATAITEM_PositionFeedback)
+			ELSEIF $nozzle ==2
+			$posZ = AXISSTATUS(B, DATAITEM_PositionFeedback)
+			ELSEIF $nozzle ==3
+			$posZ = AXISSTATUS(C, DATAITEM_PositionFeedback)
+			ELSEIF $nozzle ==4
+			$posZ = AXISSTATUS(D, DATAITEM_PositionFeedback)
+			ELSEIF $nozzle ==5
+			$posZ = AXISSTATUS(D, DATAITEM_PositionFeedback)
+		ENDIF
+		
+		IF ($posZ - $deltafast) < $floor
+			$found = -1
+		ELSE
+			IF $nozzle == 1
+				G1 A-$deltafast F$midfeed
+				ELSEIF $nozzle == 2
+				G1 B-$deltafast F$midfeed
+				ELSEIF $nozzle == 3
+				G1 C-$deltafast F$midfeed
+				ELSEIF $nozzle == 4
+				G1 D-$deltafast F$midfeed
+				ELSEIF $nozzle == 5
+				G1 D-$deltafast F$midfeed
+				ELSE
+				MSGDISPLAY 1 "something is messed up"
+			ENDIF
+		ENDIF
+	ENDWHILE
+
+; move up slightly and redo it again slowly
+IF $nozzle == 1
+			G1 A3.5 F$fastfeed
+			ELSEIF $nozzle == 2
+			G1 B3.5 F$fastfeed
+			ELSEIF $nozzle == 3
+			G1 C3.5 F$fastfeed
+			ELSEIF $nozzle == 4
+			G1 D3.5 F$fastfeed
+			ELSEIF $nozzle == 5
+			G1 D3.5 F$fastfeed
+			ELSE
+			MSGDISPLAY 1 "something is messed up"
+ENDIF
+
+
+
+	$found = 0
+WHILE $found != -1
+
+	FILEWRITE $comport "M0,0"
+	FILEREAD $comport 0 $strglob0	
+	$found = STRFIND($strglob0, "--", 1)
+	IF $nozzle ==1
+		$posZ = AXISSTATUS(A, DATAITEM_PositionFeedback)
+		ELSEIF $nozzle ==2
+		$posZ = AXISSTATUS(B, DATAITEM_PositionFeedback)
+		ELSEIF $nozzle ==3
+		$posZ = AXISSTATUS(C, DATAITEM_PositionFeedback)
+		ELSEIF $nozzle ==4
+		$posZ = AXISSTATUS(D, DATAITEM_PositionFeedback)
+		ELSEIF $nozzle ==5
+		$posZ = AXISSTATUS(D, DATAITEM_PositionFeedback)
+	ENDIF
+	
+	IF ($posZ - $deltafast) < $floor
+		$found = -1
+	ELSE
+		IF $nozzle == 1
+			G1 A-$delta F$slowfeed
+			ELSEIF $nozzle == 2
+			G1 B-$delta F$slowfeed
+			ELSEIF $nozzle == 3
+			G1 C-$delta F$slowfeed
+			ELSEIF $nozzle == 4
+			G1 D-$delta F$slowfeed
+			ELSEIF $nozzle == 5
+			G1 D-$delta F$slowfeed
+			ELSE
+			MSGDISPLAY 1 "something is messed up"
+		ENDIF
+	ENDIF
+ENDWHILE
+
+IF $nozzle == 1
+			G1 A-0.05 F$midfeed
+			ELSEIF $nozzle == 2
+			G1 B-0.05 F$midfeed
+			ELSEIF $nozzle == 3
+			G1 C-0.05 F$midfeed
+			ELSEIF $nozzle == 4
+			G1 D-0.05 F$midfeed
+			ELSEIF $nozzle == 5
+			G1 D-0.05 F$midfeed
+			ELSE
+			MSGDISPLAY 1 "something is messed up"
+ENDIF
+
+;Dwell to get accurate Reading
+DWELL 0.75
+
+; read from keyance
+FILEWRITE $comport "M0,0"
+FILEREAD $comport 0 $strglob0
+
+; Assign Reading To Variables
+
+	$comma1 = STRFIND($strglob0, ",", 1)
+	$comma1plus=$comma1+1
+	$STRGLOB1 = STRMID ($STRGLOB0, $comma1plus, 40)
+	$comma2 = STRFIND($strglob1, ",", 1)
+	$comma2 = $comma2 + $comma1
+	$comma2plus = $comma2+2
+	$STRGLOB2 = STRMID ($STRGLOB0, $comma1plus, $comma2)
+	$STRGLOB3 = STRMID ($STRGLOB0, $comma2plus, 40)
+
+		IF $nozzle = 1
+			$Ax_dif = STRTODBL($STRGLOB2)
+			$Ay_dif = STRTODBL($STRGLOB3)
+			ELSEIF $nozzle == 2
+			$Bx_dif = STRTODBL($STRGLOB2)
+			$By_dif = STRTODBL($STRGLOB3)
+			ELSEIF $nozzle == 3
+			$Cx_dif = STRTODBL($STRGLOB2)
+			$Cy_dif = STRTODBL($STRGLOB3)
+			ELSEIF $nozzle == 4
+			$Dx_dif = STRTODBL($STRGLOB2)
+			$Dy_dif = STRTODBL($STRGLOB3)
+			ELSEIF $nozzle == 5
+			$Px_dif = STRTODBL($STRGLOB2)
+			$Py_dif = STRTODBL($STRGLOB3)
+		ENDIF
+
+	G90
+	G1 A-1 B-1 C-1 D-1 F$fastfeed
+	G91
+	
+	
+
+	FILECLOSE $comport
+ENDDFS

@@ -3,7 +3,31 @@ DVAR $cCheck
 DVAR $press
 DVAR $length
 DVAR $lame
-FILECLOSE
+DVAR $comport
+
+DVAR $found, $floor $delta $deltafast $Ax $Ay $Bx $By $Cx $Cy $Dx $Dy $Px $Py $posA $posB $posC $posD $posZ $fastfeed $midfeed $slowfeed $Astart $Bstart $Cstart $Dstart $Pstart $comma1 $comma2 $comma1plus $comma2plus
+DVAR $Ax_dif $Ay_dif $Bx_dif $By_dif $Cx_dif $Cy_dif $Dx_dif $Dy_dif $Px_dif $Py_dif
+DVAR $nozzle $nozzleA $nozzleB $nozzleC $nozzleD $profilometerRod $xStart $yStart $zStart 
+
+FILECLOSE 
+
+$floor = -72
+$deltafast = 1
+$delta = 0.1
+$fastfeed = 40
+$midfeed = 10
+$slowfeed = 2
+$Astart = -15
+$Bstart = -15
+$Cstart = -15
+$Dstart = -15
+$Pstart = -15
+$nozzleA=1
+$nozzleB=2
+$nozzleC=3
+$nozzleD=4
+$profilometerRod = 5
+
 $DO0.0=0
 $DO1.0=0
 $DO2.0=0
