@@ -33,8 +33,23 @@ def clean_values(values, window=0.2, center=None):
     return cleaned
 
 
-def load_and_curate(filename='prof_dump.txt'):
-    all_data, points = load_from_file()
+def load_and_curate(filename, reset_zero=False):
+    """ Load and process the data from the calibration filedump.
+    
+    Parameters
+    ----------
+    filename : path
+        Path to the file containing the calibration dump
+    reset_zero : bool
+        If True, make the first point be (0, 0)
+        
+    Returns
+    -------
+    cal_data : Nx3 array
+        The array containing calibration deltas.
+    
+    """
+    all_data, points = load_from_file(filename)
 
     cleaned = clean_values(all_data[points[0]])
     cleaned_again = clean_values(cleaned, window=0.02)
@@ -54,7 +69,10 @@ def load_and_curate(filename='prof_dump.txt'):
     y = points[:, 1]
     z = values
 
-    return np.array([x, y, z]).T
+    cal_data = np.array([x, y, z]).T
+    if reset_zero:
+        cal_data[:, :2] -= cal_data[0, :2]
+    return cal_data
 
 
 
