@@ -53,6 +53,7 @@ class MeCode(object):
         self.cal_data = cal_data
 
         self.current_position = defaultdict(float)
+        self.movement_mode = 'relative'
 
     ### GCode Aliases  ########################################################
 
@@ -72,17 +73,39 @@ class MeCode(object):
         self.write('G92.1')
 
     def move(self, x=None, y=None, **kwargs):
-        if x:
-            self.current_position['x'] += x
-        if y:
-            self.current_position['y'] += y
-        for dimention, delta in kwargs.iteritems():
-            self.current_position[dimention] += delta
+        if self.movement_mode == 'relative':
+            if x:
+                self.current_position['x'] += x
+            if y:
+                self.current_position['y'] += y
+            for dimention, delta in kwargs.iteritems():
+                self.current_position[dimention] += delta
+        else:
+            if x:
+                self.current_position['x'] = x
+            if y:
+                self.current_position['y'] = y
+            for dimention, delta in kwargs.iteritems():
+                self.current_position[dimention] = delta
 
         if self.cal_data is not None:
             cal_axis = self.cal_axis
             x_, y_ = self.current_position['x'], self.current_position['y']
-            delta = self.interpolate(x_, y_)
+            if self.movement_mode == 'relative':
+                if x is not None:
+                    x_ = x_ + x
+                if y is not None:
+                    y_ = y_ + y
+            else:
+                if x is not None:
+                    x_ = x
+                if y is not None:
+                    y_ = y
+            desired_position = self.interpolate(x_, y_)
+            x_current = self.current_position['x']
+            y_current = self.current_position['y']
+            current_interp_pos = self.interpolate(x_current, y_current)
+            delta = desired_position - current_interp_pos
             if cal_axis in kwargs:
                 kwargs[cal_axis] += delta
             else:
@@ -90,6 +113,15 @@ class MeCode(object):
 
         args = self._format_args(x, y, kwargs)
         self.write('G1 ' + args)
+        self.write(';current position: {}'.format(self.current_position))
+        
+    def relative(self):
+        self.write('G91')
+        self.movement_mode = 'relative'
+        
+    def absolute(self):
+        self.write('G90')
+        self.movement_mode = 'absolute'
 
     def feed(self, rate):
         self.write('F{}'.format(rate))
@@ -113,7 +145,7 @@ class MeCode(object):
                 lines = open(self.header).readlines()
                 outfile.writelines(lines)
                 outfile.write('\n')
-        self.write('G91')  # start off in relative mode.
+        self.relative()  # start off in relative mode.
 
     def teardown(self):
         """ Close the outfile file after writing the footer if opened.
@@ -131,14 +163,14 @@ class MeCode(object):
         self.abs_move(x=0, y=0)
 
     def abs_move(self, x=None, y=None, **kwargs):
-        self.write('G90')
+        self.absolute()
         self.move(x=x, y=y, **kwargs)
-        self.write('G91')
+        self.relative()
 
     def abs_arc(self, direction='CW', radius=1, **kwargs):
-        self.write('G90')
+        self.absolute()
         self.arc(direction=direction, radius=radius, **kwargs)
-        self.write('G91')
+        self.relative()
 
     def arc(self, direction='CW', radius=1, **kwargs):
         """ Arc to the given point with the given radius and in the given
@@ -302,7 +334,7 @@ class MeCode(object):
     def interpolate(self, x, y):
         cal_data = self.cal_data
         delta = griddata((cal_data[:, 0], cal_data[:, 1]), cal_data[:, 2],
-                         (x, y), method='cubic', fill_value=0)
+                         (x, y), method='linear', fill_value=0)
         return delta
         
     def show_interpolation_surface(self, interpolate=True):
@@ -330,10 +362,10 @@ class MeCode(object):
     def _format_args(self, x, y, kwargs):
         args = []
         if x is not None:
-            args.append('X{}'.format(x))
+            args.append('X{0:f}'.format(x))
         if y is not None:
-            args.append('Y{}'.format(y))
-        args += ['{}{}'.format(k, v) for k, v in kwargs.items()]
+            args.append('Y{0:f}'.format(y))
+        args += ['{0}{1:f}'.format(k, v) for k, v in kwargs.items()]
         args = ' '.join(args)
         return args
 

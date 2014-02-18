@@ -33,15 +33,15 @@ def clean_values(values, window=0.2, center=None):
     return cleaned
 
 
-def load_and_curate(filename, reset_zero=False):
+def load_and_curate(filename, reset_start=None):
     """ Load and process the data from the calibration filedump.
     
     Parameters
     ----------
     filename : path
         Path to the file containing the calibration dump
-    reset_zero : bool
-        If True, make the first point be (0, 0)
+    reset_start : len 2 tuple or None
+        If not None, shift calibration data to supplied starting point.
         
     Returns
     -------
@@ -70,8 +70,9 @@ def load_and_curate(filename, reset_zero=False):
     z = values
 
     cal_data = np.array([x, y, z]).T
-    if reset_zero:
+    if reset_start is not None:
         cal_data[:, :2] -= cal_data[0, :2]
+        cal_data[:, :2] += reset_start
     return cal_data
 
 
