@@ -73,21 +73,6 @@ class MeCode(object):
         self.write('G92.1')
 
     def move(self, x=None, y=None, **kwargs):
-        if self.movement_mode == 'relative':
-            if x:
-                self.current_position['x'] += x
-            if y:
-                self.current_position['y'] += y
-            for dimention, delta in kwargs.iteritems():
-                self.current_position[dimention] += delta
-        else:
-            if x:
-                self.current_position['x'] = x
-            if y:
-                self.current_position['y'] = y
-            for dimention, delta in kwargs.iteritems():
-                self.current_position[dimention] = delta
-
         if self.cal_data is not None:
             cal_axis = self.cal_axis
             x_, y_ = self.current_position['x'], self.current_position['y']
@@ -111,14 +96,29 @@ class MeCode(object):
             else:
                 kwargs[cal_axis] = delta
 
+        if self.movement_mode == 'relative':
+            if x:
+                self.current_position['x'] += x
+            if y:
+                self.current_position['y'] += y
+            for dimention, delta in kwargs.iteritems():
+                self.current_position[dimention] += delta
+        else:
+            if x:
+                self.current_position['x'] = x
+            if y:
+                self.current_position['y'] = y
+            for dimention, delta in kwargs.iteritems():
+                self.current_position[dimention] = delta
+
         args = self._format_args(x, y, kwargs)
         self.write('G1 ' + args)
         self.write(';current position: {}'.format(self.current_position))
-        
+
     def relative(self):
         self.write('G91')
         self.movement_mode = 'relative'
-        
+
     def absolute(self):
         self.write('G90')
         self.movement_mode = 'absolute'
@@ -305,7 +305,7 @@ class MeCode(object):
 
     def toggle_pressure(self, com_port):
         self.write('Call togglePress P{}'.format(com_port))
-        
+
     def align_nozzle(self, nozzle, floor=-72, deltafast=1, deltaslow=0.1,
                     start=-15):
         if nozzle == 'A':
@@ -336,7 +336,7 @@ class MeCode(object):
         delta = griddata((cal_data[:, 0], cal_data[:, 1]), cal_data[:, 2],
                          (x, y), method='linear', fill_value=0)
         return delta
-        
+
     def show_interpolation_surface(self, interpolate=True):
         from mpl_toolkits.mplot3d import Axes3D
         import matplotlib.pyplot as plt
