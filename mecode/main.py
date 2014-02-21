@@ -113,7 +113,7 @@ class MeCode(object):
 
         args = self._format_args(x, y, kwargs)
         self.write('G1 ' + args)
-        self.write(';current position: {}'.format(self.current_position))
+        #self.write(';current position: {}'.format(self.current_position))
 
     def relative(self):
         self.write('G91')
