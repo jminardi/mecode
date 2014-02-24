@@ -258,15 +258,15 @@ WHILE $found != -1
 ENDWHILE
 
 IF $nozzle == 1
-			G1 A-0.05 F$midfeed
+			G1 A-0.4 F$midfeed
 			ELSEIF $nozzle == 2
-			G1 B-0.05 F$midfeed
+			G1 B-0.4 F$midfeed
 			ELSEIF $nozzle == 3
-			G1 C-0.05 F$midfeed
+			G1 C-0.4 F$midfeed
 			ELSEIF $nozzle == 4
-			G1 D-0.05 F$midfeed
+			G1 D-0.4 F$midfeed
 			ELSEIF $nozzle == 5
-			G1 D-0.05 F$midfeed
+			G1 D-0.4 F$midfeed
 			ELSE
 			MSGDISPLAY 1 "something is messed up"
 ENDIF
