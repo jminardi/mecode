@@ -367,6 +367,8 @@ DFS alignZeroNozzle
 	
 	
 	FILEWRITE $comport "PW,3" ; Select Program #3
+	FILEREAD $comport 0 $strglob1
+
 	
 	G90
 	G1 A-0.5 B-0.5 C-0.5 D-0.5 F$fastfeed
@@ -406,6 +408,7 @@ DFS alignZeroNozzle
 	
 		FILEWRITE $comport "M0,0"
 		FILEREAD $comport 0 $strglob0	
+		
 		$found = STRFIND($strglob0, "--", 1)
 		IF $nozzle == 1
 			$posZ = AXISSTATUS(A, DATAITEM_PositionFeedback)
@@ -418,6 +421,7 @@ DFS alignZeroNozzle
 			ELSEIF $nozzle ==5
 			$posZ = AXISSTATUS(D, DATAITEM_PositionFeedback)
 		ENDIF
+		
 		
 		IF ($posZ - $deltafast) < $floor
 			$found = -1
@@ -436,6 +440,7 @@ DFS alignZeroNozzle
 				MSGDISPLAY 1 "something is messed up"
 			ENDIF
 		ENDIF
+		MSGDISPLAY 1 "found: " + $found
 	ENDWHILE
 
 ; move up slightly and redo it again slowly
@@ -545,6 +550,7 @@ FILEREAD $comport 0 $strglob0
 ;switch keyence programs
 $DO7.0=1
 FILEWRITE $comport "PW,4" ; Select Program #4
+FILEREAD $comport 0 $strglob1
 
 ; Attain zero value
         IF $nozzle = 1
@@ -553,24 +559,21 @@ FILEWRITE $comport "PW,4" ; Select Program #4
 			G1 X$xOffset Y$yOffset
 			$zMeasureA = AXISSTATUS(A, DATAITEM_PositionFeedback)
 			DWELL 3
-			FILEWRITE $comport "M2,0"
-	                FILEREAD $comport 0 $strglob0
-	                $STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
-	                $Az_dif = STRTODBL($STRGLOB1)
+			CALL zSweep Q2 R0.025 L0.25
+	                $Az_dif = $z_dif
 	                MSGDISPLAY 1 "Az_dif: " + $Az_dif
 			MSGDISPLAY 1 "zMeasureA: " + $zMeasureA
+			
 			ELSEIF $nozzle == 2
 			G91
 			G1 X-$Bx_dif Y-$By_dif F5
 			G1 X$xOffset Y$yOffset
 			DWELL 3
 			$zMeasureB = AXISSTATUS(B, DATAITEM_PositionFeedback)
-			FILEWRITE $comport "M2,0"
-	                FILEREAD $comport 0 $strglob0
-	                $STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
-	                $Bz_dif = STRTODBL($STRGLOB1)
+			CALL zSweep Q2 R0.025 L0.25
+	                $Bz_dif = $z_dif
 	                MSGDISPLAY 1 "Bz_dif: " + $Bz_dif
-	                MSGDISPLAY 1 "zMeasureB: " + $zMeasureB
+			MSGDISPLAY 1 "zMeasureB: " + $zMeasureB
 	                
 			ELSEIF $nozzle == 3
 			G91
@@ -578,12 +581,10 @@ FILEWRITE $comport "PW,4" ; Select Program #4
 			G1 X$xOffset Y$yOffset
 			DWELL 3
 			$zMeasureC = AXISSTATUS(C, DATAITEM_PositionFeedback)
-			FILEWRITE $comport "M2,0"
-	                FILEREAD $comport 0 $strglob0
-	                $STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
-	                $Cz_dif = STRTODBL($STRGLOB1)
+			CALL zSweep Q2 R0.1 L0.25
+	                $Cz_dif = $z_dif
 	                MSGDISPLAY 1 "Cz_dif: " + $Cz_dif
-	                MSGDISPLAY 1 "zMeasureC: " + $zMeasureC
+			MSGDISPLAY 1 "zMeasureC: " + $zMeasureC
 	                
 			ELSEIF $nozzle == 4
 			G91
@@ -591,16 +592,15 @@ FILEWRITE $comport "PW,4" ; Select Program #4
 			G1 X$xOffset Y$yOffset
 			DWELL 3
 			$zMeasureD = AXISSTATUS(D, DATAITEM_PositionFeedback)
-			FILEWRITE $comport "M2,0"
-	                FILEREAD $comport 0 $strglob0
-	                $STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
-	                $Dz_dif = STRTODBL($STRGLOB1)
+			CALL zSweep Q2 R0.1 L0.25
+	                $Dz_dif = $z_dif
 	                MSGDISPLAY 1 "Dz_dif: " + $Dz_dif
-	                MSGDISPLAY 1 "zMeasureD: " + $zMeasureD
+			MSGDISPLAY 1 "zMeasureD: " + $zMeasureD
 		ENDIF
 
 $DO7.0=0
 FILEWRITE $comport "PW,3" ; Select Program #3
+FILEREAD $comport 0 $strglob1
 	G90
 	G1 A-1 B-1 C-1 D-1 F$fastfeed
 	G91
@@ -608,4 +608,39 @@ FILEWRITE $comport "PW,3" ; Select Program #3
 	
 
 	FILECLOSE $comport
+ENDDFS
+
+
+
+DFS zSweep
+$zSweepRange = $Q
+$zSweepStep = $R
+$zDwell = $L
+
+
+
+$numsteps = ($zSweepRange/$zSweepStep)
+$start = (($zSweepRange/2)/1.414213)
+$step = $zSweepStep/1.414213
+$z_dif=10
+$count = 0
+G91
+G1 X-($start) Y$start F2
+
+WHILE $count<$numsteps
+	
+	
+	Dwell $zDwell
+	FILEWRITE $comport "M2,0"
+	FILEREAD $comport 0 $strglob0
+	$STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
+	$tempdistance = STRTODBL($STRGLOB1)
+	IF $tempdistance < $z_dif
+		$z_dif=$tempdistance
+                MSGDISPLAY 1 "zdif recorded: " + $z_dif
+	ENDIF
+	$count = $count + 1
+	G1 X($step) Y-$step F2
+ENDWHILE
+
 ENDDFS

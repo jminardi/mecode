@@ -9,7 +9,8 @@ DVAR $found, $floor $delta $deltafast $Ax $Ay $Bx $By $Cx $Cy $Dx $Dy $Px $Py $p
 DVAR $Ax_dif $Ay_dif $Bx_dif $By_dif $Cx_dif $Cy_dif $Dx_dif $Dy_dif $Px_dif $Py_dif
 DVAR $nozzle $nozzleA $nozzleB $nozzleC $nozzleD $profilometerRod $xStart $yStart $zStart 
 DVAR $zMeasureA $zMeasureB $zMeasureC $zMeasureD $Az_dif $Bz_dif $Cz_dif $Dz_dif $xOffset $yOffset
-DVAR $zA $zB $zC $zD
+DVAR $zA $zB $zC $zD $check
+DVAR $zSweepRange $zSweepStep $numsteps $tempdistance $zDwell $count $z_dif $step $start
 FILECLOSE 
 
 $floor = -72
