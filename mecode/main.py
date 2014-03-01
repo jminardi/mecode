@@ -322,7 +322,24 @@ class MeCode(object):
             raise RuntimeError('invalid nozzle: {}'.format(nozzle))
         arg = 'Call alignNozzle Q{} R{} L{} I{} J{}'
         self.write(arg.format(start, deltaslow, nozzle, floor, deltafast))
-
+    
+    def align_zero_nozzle(self, nozzle, floor=-72, deltafast=1, deltaslow=0.1,
+                    start=-15):
+        if nozzle == 'A':
+            nozzle = 1
+        elif nozzle == 'B':
+            nozzle = 2
+        elif nozzle == 'C':
+            nozzle = 3
+        elif nozzle == 'D':
+            nozzle = 4
+        elif nozzle == 'profilometer':
+            nozzle = 5
+        else:
+            raise RuntimeError('invalid nozzle: {}'.format(nozzle))
+        arg = 'Call alignZeroNozzle Q{} R{} L{} I{} J{}'
+        self.write(arg.format(start, deltaslow, nozzle, floor, deltafast))
+        
     def set_pressure(self, com_port, value):
         self.write('Call setPress P{} Q{}'.format(com_port, value))
 
