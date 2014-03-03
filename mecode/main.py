@@ -345,6 +345,9 @@ class MeCode(object):
 
     def set_valve(self, num, value):
         self.write('$DO{}.0={}'.format(num, value))
+        
+    def save_alignment(self):
+        self.write('Call save_values')     
 
     ### Private Interface  ####################################################
 

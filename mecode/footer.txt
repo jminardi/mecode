@@ -347,14 +347,14 @@ DFS alignZeroNozzle
 	;#$Px = 148
 	;#$Py = 345
 	
-	$Ax = 606.662
-	$Ay = 352.920
-	$Bx = 502.662
-	$By = 352.920
-	$Cx = 398.662
-	$Cy = 352.920
-	$Dx = 319.662
-	$Dy = 352.920
+	$Ax = 586.075
+	$Ay = 367.8285
+	$Bx = 482.075
+	$By = 367.8285
+	$Cx = 378.075
+	$Cy = 367.8285
+	$Dx = 299.075
+	$Dy = 367.8285
 	$Px = 148
 	$Py = 345
 	
@@ -559,7 +559,7 @@ FILEREAD $comport 0 $strglob1
 			G1 X$xOffset Y$yOffset
 			$zMeasureA = AXISSTATUS(A, DATAITEM_PositionFeedback)
 			DWELL 3
-			CALL zSweep Q2 R0.025 L0.25
+			CALL zSweep Q2 R0.075 L0.25
 	                $Az_dif = $z_dif
 	                MSGDISPLAY 1 "Az_dif: " + $Az_dif
 			MSGDISPLAY 1 "zMeasureA: " + $zMeasureA
@@ -581,7 +581,7 @@ FILEREAD $comport 0 $strglob1
 			G1 X$xOffset Y$yOffset
 			DWELL 3
 			$zMeasureC = AXISSTATUS(C, DATAITEM_PositionFeedback)
-			CALL zSweep Q2 R0.1 L0.25
+			CALL zSweep Q2 R0.025 L0.25
 	                $Cz_dif = $z_dif
 	                MSGDISPLAY 1 "Cz_dif: " + $Cz_dif
 			MSGDISPLAY 1 "zMeasureC: " + $zMeasureC
@@ -592,7 +592,7 @@ FILEREAD $comport 0 $strglob1
 			G1 X$xOffset Y$yOffset
 			DWELL 3
 			$zMeasureD = AXISSTATUS(D, DATAITEM_PositionFeedback)
-			CALL zSweep Q2 R0.1 L0.25
+			CALL zSweep Q2 R0.025 L0.25
 	                $Dz_dif = $z_dif
 	                MSGDISPLAY 1 "Dz_dif: " + $Dz_dif
 			MSGDISPLAY 1 "zMeasureD: " + $zMeasureD
@@ -643,4 +643,27 @@ WHILE $count<$numsteps
 	G1 X($step) Y-$step F2
 ENDWHILE
 
+ENDDFS
+
+DFS save_values
+$align_save = FILEOPEN "C:\Users\Lewis Group\Desktop\Alignment\last_alignment_values.txt", 0
+
+FILEWRITE $align_save "$Ax_dif = " + $Ax_dif
+FILEWRITE $align_save "$Ay_dif = " + $Ay_dif
+FILEWRITE $align_save "$zMeasureA = " + $zMeasureA
+FILEWRITE $align_save "$Az_dif = " + $Az_dif
+FILEWRITE $align_save "$Bx_dif = " + $Bx_dif
+FILEWRITE $align_save "$By_dif = " + $By_dif
+FILEWRITE $align_save "$zMeasureB = " + $zMeasureB
+FILEWRITE $align_save "$Bz_dif = " + $Bz_dif
+FILEWRITE $align_save "$Cx_dif = " + $Cx_dif
+FILEWRITE $align_save "$Cy_dif = " + $Cy_dif
+FILEWRITE $align_save "$zMeasureC = " + $zMeasureC
+FILEWRITE $align_save "$Cz_dif = " + $Cz_dif
+FILEWRITE $align_save "$Dx_dif = " + $Dx_dif
+FILEWRITE $align_save "$Dy_dif = " + $Dy_dif
+FILEWRITE $align_save "$zMeasureD = " + $zMeasureD
+FILEWRITE $align_save "$Dz_dif = " + $Dz_dif
+
+FILECLOSE $align_save
 ENDDFS
