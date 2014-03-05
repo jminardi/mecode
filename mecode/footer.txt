@@ -618,11 +618,12 @@ $zSweepStep = $R
 $zDwell = $L
 
 
-
+$indicator = 0
+$z_num = 0
 $numsteps = ($zSweepRange/$zSweepStep)
 $start = (($zSweepRange/2)/1.414213)
 $step = $zSweepStep/1.414213
-$z_dif=10
+$z_dif=6
 $count = 0
 G91
 G1 X-($start) Y$start F2
@@ -636,34 +637,59 @@ WHILE $count<$numsteps
 	$STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
 	$tempdistance = STRTODBL($STRGLOB1)
 	IF $tempdistance < $z_dif
-		$z_dif=$tempdistance
+	        $z_dif=$tempdistance
+	        $z_past = $z_dif + 1
+		;$indicator = 1
                 MSGDISPLAY 1 "zdif recorded: " + $z_dif
+	ENDIF
+	IF $indicator = 1
+	       IF $tempdistance > $z_past
+	           $z_num = $z_num + 1
+	       ELSE 
+	           $z_num = 0
+	       ENDIF
+	ENDIF
+	IF $z_num = 5
+	   GOTO quit_loop
 	ENDIF
 	$count = $count + 1
 	G1 X($step) Y-$step F2
 ENDWHILE
-
+:quit_loop
 ENDDFS
 
-DFS save_values
-$align_save = FILEOPEN "C:\Users\Lewis Group\Desktop\Alignment\last_alignment_values.txt", 0
+DFS save_value
 
-FILEWRITE $align_save "$Ax_dif = " + $Ax_dif
-FILEWRITE $align_save "$Ay_dif = " + $Ay_dif
-FILEWRITE $align_save "$zMeasureA = " + $zMeasureA
-FILEWRITE $align_save "$Az_dif = " + $Az_dif
-FILEWRITE $align_save "$Bx_dif = " + $Bx_dif
-FILEWRITE $align_save "$By_dif = " + $By_dif
-FILEWRITE $align_save "$zMeasureB = " + $zMeasureB
-FILEWRITE $align_save "$Bz_dif = " + $Bz_dif
-FILEWRITE $align_save "$Cx_dif = " + $Cx_dif
-FILEWRITE $align_save "$Cy_dif = " + $Cy_dif
-FILEWRITE $align_save "$zMeasureC = " + $zMeasureC
-FILEWRITE $align_save "$Cz_dif = " + $Cz_dif
-FILEWRITE $align_save "$Dx_dif = " + $Dx_dif
-FILEWRITE $align_save "$Dy_dif = " + $Dy_dif
-FILEWRITE $align_save "$zMeasureD = " + $zMeasureD
-FILEWRITE $align_save "$Dz_dif = " + $Dz_dif
+    $nozzle = $Q
+IF $nozzle = 1
+    $align_save = FILEOPEN "C:\Users\Lewis Group\Desktop\Alignment\alignment_values_1.txt", 0
+    FILEWRITE $align_save "$Ax_dif = " + $Ax_dif
+    FILEWRITE $align_save "$Ay_dif = " + $Ay_dif
+    FILEWRITE $align_save "$zMeasureA = " + $zMeasureA
+    FILEWRITE $align_save "$Az_dif = " + $Az_dif
+ENDIF
+IF $nozzle = 2
+    $align_save = FILEOPEN "C:\Users\Lewis Group\Desktop\Alignment\alignment_values_2.txt", 0
+    FILEWRITE $align_save "$Bx_dif = " + $Bx_dif
+    FILEWRITE $align_save "$By_dif = " + $By_dif
+    FILEWRITE $align_save "$zMeasureB = " + $zMeasureB
+    FILEWRITE $align_save "$Bz_dif = " + $Bz_dif
+ENDIF
+IF $nozzle = 3
+    $align_save = FILEOPEN "C:\Users\Lewis Group\Desktop\Alignment\alignment_values_3.txt", 0
+    FILEWRITE $align_save "$Cx_dif = " + $Cx_dif
+    FILEWRITE $align_save "$Cy_dif = " + $Cy_dif
+    FILEWRITE $align_save "$zMeasureC = " + $zMeasureC
+    FILEWRITE $align_save "$Cz_dif = " + $Cz_dif
+ENDIF
+IF $nozzle = 4
+    $align_save = FILEOPEN "C:\Users\Lewis Group\Desktop\Alignment\alignment_values_4.txt", 0
+    FILEWRITE $align_save "$Dx_dif = " + $Dx_dif
+    FILEWRITE $align_save "$Dy_dif = " + $Dy_dif
+    FILEWRITE $align_save "$zMeasureD = " + $zMeasureD
+    FILEWRITE $align_save "$Dz_dif = " + $Dz_dif
+ENDIF
+
 
 FILECLOSE $align_save
 ENDDFS

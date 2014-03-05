@@ -11,7 +11,7 @@ DVAR $Ax_dif $Ay_dif $Bx_dif $By_dif $Cx_dif $Cy_dif $Dx_dif $Dy_dif $Px_dif $Py
 DVAR $nozzle $nozzleA $nozzleB $nozzleC $nozzleD $profilometerRod $xStart $yStart $zStart 
 DVAR $zMeasureA $zMeasureB $zMeasureC $zMeasureD $Az_dif $Bz_dif $Cz_dif $Dz_dif $xOffset $yOffset
 DVAR $zA $zB $zC $zD $check
-DVAR $zSweepRange $zSweepStep $numsteps $tempdistance $zDwell $count $z_dif $step $start
+DVAR $zSweepRange $zSweepStep $numsteps $tempdistance $zDwell $count $z_dif $z_past $z_num $indicator $step $start
 DVAR $align_save
 FILECLOSE 
 
@@ -31,6 +31,17 @@ $nozzleB=2
 $nozzleC=3
 $nozzleD=4
 $profilometerRod = 5
+
+$Ax = 586.075
+$Ay = 367.8285
+$Bx = 482.075
+$By = 367.8285
+$Cx = 378.075
+$Cy = 367.8285
+$Dx = 299.075
+$Dy = 367.8285
+$Px = 148
+$Py = 345
 
 $DO0.0=0
 $DO1.0=0

@@ -346,8 +346,21 @@ class MeCode(object):
     def set_valve(self, num, value):
         self.write('$DO{}.0={}'.format(num, value))
         
-    def save_alignment(self):
-        self.write('Call save_values')     
+    def save_alignment(self, nozzle = 'A'):
+        if nozzle == 'A':
+            nozzle = 1
+        elif nozzle == 'B':
+            nozzle = 2
+        elif nozzle == 'C':
+            nozzle = 3
+        elif nozzle == 'D':
+            nozzle = 4
+        elif nozzle == 'all':
+            self.write('Call save_value Q1') 
+            self.write('Call save_value Q2') 
+            self.write('Call save_value Q3') 
+            nozzle= 4 
+        self.write('Call save_value Q{}'.format(nozzle))     
 
     ### Private Interface  ####################################################
 
