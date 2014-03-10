@@ -1,1 +1,1 @@
-from main import MeCode
+from main import G

@@ -19,7 +19,7 @@ from scipy.interpolate import griddata
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
-class MeCode(object):
+class G(object):
 
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
                  cal_data=None, cal_axis='A'):
@@ -70,7 +70,56 @@ class MeCode(object):
 
     def reset_home(self):
         # FIXME This does not work with internal current_position
+        # FIXME You must call an abs_move after this to re-sync
+        # current_position
         self.write('G92.1')
+
+    def relative(self):
+        self.write('G91')
+        self.movement_mode = 'relative'
+
+    def absolute(self):
+        self.write('G90')
+        self.movement_mode = 'absolute'
+
+    def feed(self, rate):
+        self.write('F{}'.format(rate))
+
+    def dwell(self, time):
+        self.write('G4 P{}'.format(time))
+
+    ### Composed Functions  ###################################################
+
+    def setup(self):
+        """ Set the environment into a consistent state to start off.
+        """
+        outfile = self.outfile
+        if outfile is not None:
+            if isinstance(outfile, basestring):
+                outfile = open(outfile, 'w+')  # open it if it is a path
+            self.outfile = outfile
+            lines = open(os.path.join(HERE, 'header.txt')).readlines()
+            outfile.writelines(lines)
+            outfile.write('\n')
+            if self.header is not None:
+                lines = open(self.header).readlines()
+                outfile.writelines(lines)
+                outfile.write('\n')
+
+    def teardown(self):
+        """ Close the outfile file after writing the footer if opened.
+        """
+        if self.outfile is not None:
+            lines = open(os.path.join(HERE, 'footer.txt')).readlines()
+            self.outfile.writelines(lines)
+            self.outfile.close()
+            if self.footer is not None:
+                lines = open(self.footer).readlines()
+                self.outfile.writelines(lines)
+                self.outfile.write('\n')
+
+    def home(self):
+        self.abs_move(x=0, y=0)
 
     def move(self, x=None, y=None, **kwargs):
         if self.cal_data is not None:
@@ -97,79 +146,26 @@ class MeCode(object):
                 kwargs[cal_axis] = delta
 
         if self.movement_mode == 'relative':
-            if x:
+            if x is not None:
                 self.current_position['x'] += x
-            if y:
+            if y is not None:
                 self.current_position['y'] += y
             for dimention, delta in kwargs.iteritems():
                 self.current_position[dimention] += delta
         else:
-            if x:
+            if x is not None:
                 self.current_position['x'] = x
-            if y:
+            if y is not None:
                 self.current_position['y'] = y
             for dimention, delta in kwargs.iteritems():
                 self.current_position[dimention] = delta
 
         args = self._format_args(x, y, kwargs)
         self.write('G1 ' + args)
-        self.write(';current position: {}'.format(self.current_position))
-
-    def relative(self):
-        self.write('G91')
-        self.movement_mode = 'relative'
-
-    def absolute(self):
-        self.write('G90')
-        self.movement_mode = 'absolute'
-
-    def feed(self, rate):
-        self.write('F{}'.format(rate))
-
-    def dwell(self, time):
-        self.write('G4 P{}'.format(time))
-
-    ### Composed Functions  ###################################################
-
-    def setup(self, outfile=None):
-        """ Set the environment into a consistent state to start off.
-        """
-        outfile = self.outfile
-        if outfile is not None:
-            outfile = open(outfile, 'w+')
-            self.outfile = outfile
-            lines = open(os.path.join(HERE, 'header.txt')).readlines()
-            outfile.writelines(lines)
-            outfile.write('\n')
-            if self.header is not None:
-                lines = open(self.header).readlines()
-                outfile.writelines(lines)
-                outfile.write('\n')
-        self.relative()  # start off in relative mode.
-
-    def teardown(self):
-        """ Close the outfile file after writing the footer if opened.
-        """
-        if self.outfile is not None:
-            lines = open(os.path.join(HERE, 'footer.txt')).readlines()
-            self.outfile.writelines(lines)
-            self.outfile.close()
-            if self.footer is not None:
-                lines = open(self.footer).readlines()
-                self.outfile.writelines(lines)
-                self.outfile.write('\n')
-
-    def home(self):
-        self.abs_move(x=0, y=0)
 
     def abs_move(self, x=None, y=None, **kwargs):
         self.absolute()
         self.move(x=x, y=y, **kwargs)
-        self.relative()
-
-    def abs_arc(self, direction='CW', radius=1, **kwargs):
-        self.absolute()
-        self.arc(direction=direction, radius=radius, **kwargs)
         self.relative()
 
     def arc(self, direction='CW', radius=1, **kwargs):
@@ -209,6 +205,11 @@ class MeCode(object):
 
         for dimension, delta in kwargs.items():
             self.current_position[dimension] += delta
+
+    def abs_arc(self, direction='CW', radius=1, **kwargs):
+        self.absolute()
+        self.arc(direction=direction, radius=radius, **kwargs)
+        self.relative()
 
     def rect(self, x, y, direction='CW'):
         """ Trace a rectangle with the given width and height.
@@ -338,7 +339,7 @@ class MeCode(object):
         return delta
 
     def show_interpolation_surface(self, interpolate=True):
-        from mpl_toolkits.mplot3d import Axes3D
+        from mpl_toolkits.mplot3d import Axes3D  #noqa
         import matplotlib.pyplot as plt
         ax = plt.figure().gca(projection='3d')
         d = self.cal_data
@@ -368,9 +369,3 @@ class MeCode(object):
         args += ['{0}{1:f}'.format(k, v) for k, v in kwargs.items()]
         args = ' '.join(args)
         return args
-
-
-if __name__ == '__main__':
-    g = MeCode()
-    g.meander(10, 10, .5)
-    g.teardown()
