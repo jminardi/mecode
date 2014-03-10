@@ -1,4 +1,6 @@
 *.py[cod]
+.DS_Store
+.ropeproject
 
 # C extensions
 *.so
