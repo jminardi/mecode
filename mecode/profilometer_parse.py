@@ -5,7 +5,7 @@ import numpy as np
 #import matplotlib.pyplot as plt
 
 
-def load_from_file(filename='prof_dump.txt', min_=2000, max_=31000):
+def load_from_file(filename='profilometer_dump.txt', min_=2000, max_=31000):
     with open(filename) as f:
         all_data = defaultdict(list)
         points = []
