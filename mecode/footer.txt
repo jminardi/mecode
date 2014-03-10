@@ -440,7 +440,7 @@ DFS alignZeroNozzle
 				MSGDISPLAY 1 "something is messed up"
 			ENDIF
 		ENDIF
-		MSGDISPLAY 1 "found: " + $found
+		
 	ENDWHILE
 
 ; move up slightly and redo it again slowly
@@ -559,7 +559,7 @@ FILEREAD $comport 0 $strglob1
 			G1 X$xOffset Y$yOffset
 			$zMeasureA = AXISSTATUS(A, DATAITEM_PositionFeedback)
 			DWELL 3
-			CALL zSweep Q2 R0.075 L0.25
+			CALL zHold Q3 R0.075 L0.25
 	                $Az_dif = $z_dif
 	                MSGDISPLAY 1 "Az_dif: " + $Az_dif
 			MSGDISPLAY 1 "zMeasureA: " + $zMeasureA
@@ -570,7 +570,7 @@ FILEREAD $comport 0 $strglob1
 			G1 X$xOffset Y$yOffset
 			DWELL 3
 			$zMeasureB = AXISSTATUS(B, DATAITEM_PositionFeedback)
-			CALL zSweep Q2 R0.025 L0.25
+			CALL zHold Q3 R0.025 L0.25
 	                $Bz_dif = $z_dif
 	                MSGDISPLAY 1 "Bz_dif: " + $Bz_dif
 			MSGDISPLAY 1 "zMeasureB: " + $zMeasureB
@@ -581,7 +581,7 @@ FILEREAD $comport 0 $strglob1
 			G1 X$xOffset Y$yOffset
 			DWELL 3
 			$zMeasureC = AXISSTATUS(C, DATAITEM_PositionFeedback)
-			CALL zSweep Q2 R0.025 L0.25
+			CALL zHold Q3 R0.025 L0.25
 	                $Cz_dif = $z_dif
 	                MSGDISPLAY 1 "Cz_dif: " + $Cz_dif
 			MSGDISPLAY 1 "zMeasureC: " + $zMeasureC
@@ -592,7 +592,7 @@ FILEREAD $comport 0 $strglob1
 			G1 X$xOffset Y$yOffset
 			DWELL 3
 			$zMeasureD = AXISSTATUS(D, DATAITEM_PositionFeedback)
-			CALL zSweep Q2 R0.025 L0.25
+			CALL zHold Q3 R0.025 L0.25
 	                $Dz_dif = $z_dif
 	                MSGDISPLAY 1 "Dz_dif: " + $Dz_dif
 			MSGDISPLAY 1 "zMeasureD: " + $zMeasureD
@@ -610,6 +610,26 @@ FILEREAD $comport 0 $strglob1
 	FILECLOSE $comport
 ENDDFS
 
+DFS zHold
+    $zSweepRange = $Q
+    $zSweepStep = $R
+    $zDwell = $L
+    $start = (($zSweepRange/2)/1.414213)
+    $x_dist = (($zSweepRange)/1.414213)
+    
+    G91
+    G1 X-($start) Y$start F2
+
+    FILEWRITE $comport "U1"
+    FILEREAD $comport 0 $strglob0
+    G1 X$x_dist Y-$x_dist F0.5
+    FILEWRITE $comport "L1,0"
+    FILEREAD $comport 0 $strglob0
+    $STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
+    $z_dif = STRTODBL($STRGLOB1)
+
+ENDDFS
+        
 
 
 DFS zSweep
