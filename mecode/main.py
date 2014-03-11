@@ -168,29 +168,41 @@ class G(object):
         self.move(x=x, y=y, **kwargs)
         self.relative()
 
-    def arc(self, direction='CW', radius=1, **kwargs):
+    def arc(self, direction='CW', radius=1, helix_dim=None, helix_len=0,
+            **kwargs):
         """ Arc to the given point with the given radius and in the given
         direction
 
         Parameters
         ----------
-        points : strs
+        points : floats
             Must specify two points as kwargs, e.g. X=5, Y=5
         direction : str (either 'CW' or 'CCW')
             The direction to execute the arc in.
         radius : float
             The radius of the arc.
+        helix_dim : str
+            The linear dimension to complete the helix through
+        helix_len : float
+            The length to move in the linear helix dimension.
 
         """
+        msg = 'Must specify point with 2 dimensions as keywords, e.g. X=0, Y=10'
+        if len(kwargs) != 2:
+            raise RuntimeError(msg)
         dimensions = [k.lower() for k in kwargs.keys()]
         if 'x' in dimensions and 'y' in dimensions:
             plane_selector = 'G17'  # XY plane
+            axis = None
         elif 'x' in dimensions:
             plane_selector = 'G18'  # XZ plane
+            dimensions.remove('x')
+            axis = dimensions[0].upper()
         elif 'y' in dimensions:
             plane_selector = 'G19'  # YZ plane
+            dimensions.remove('y')
+            axis = dimensions[0].upper()
         else:
-            msg = 'Must specify point in 2D as kw arg, e.g. X=10, Y=10'
             raise RuntimeError(msg)
 
         if direction == 'CW':
@@ -199,10 +211,14 @@ class G(object):
             command = 'G3'
 
         args = ' '.join([(k.upper() + str(v)) for k, v in kwargs.items()])
+        if axis is not None:    
+            self.write('G16 X Y {}'.format(axis))  # coordinate axis assignment
         self.write(plane_selector)
-        self.write('{} {} R{}'.format(command, args, radius))
-        self.write('G17')  # always return back to the default XY plane.
-
+        if helix_dim is None:
+            self.write('{} {} R{}'.format(command, args, radius))
+        else:
+            self.write('{} {} R{} G1 {}{}'.format(command, args, radius,
+                                                  helix_dim.upper(), helix_len))
         for dimension, delta in kwargs.items():
             self.current_position[dimension] += delta
 
