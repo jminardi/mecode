@@ -211,7 +211,7 @@ class G(object):
         self.arc(direction=direction, radius=radius, **kwargs)
         self.relative()
 
-    def rect(self, x, y, direction='CW'):
+    def rect(self, x, y, direction='CW', start='LL'):
         """ Trace a rectangle with the given width and height.
 
         Parameters
@@ -220,11 +220,16 @@ class G(object):
             The width of the rectange in the x dimension.
         y : float
             The heigh of the rectangle in the y dimension.
-        direction : either 'CW' or 'CCW'
-            Whether to draw the rectangle clockwise or counter clockwise.
+        direction : str (either 'CW' or 'CCW')
+            Which direction to complete the rectangle in.
+        start : str (either 'LL', 'UL', 'LR', 'UR')
+            The start of the rectangle -  L/U = lower/upper, L/R = left/right
 
         """
-        if direction == 'CW':
+        if direction == 'CCW':
+            x, y = -x, -y
+
+        if start.upper() == 'LL':
             self.move(y=y)
             self.move(x=x)
             self.move(y=-y)
