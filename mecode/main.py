@@ -35,7 +35,7 @@ class G(object):
             Optional path to a file containing lines to be written at the
             beginning of the output file
         footer : path
-            Optional path to a gile containing lines to be written at the end
+            Optional path to a file containing lines to be written at the end
             of the output file.
         cal_data : Nx3 array or None
             Numpy array representing calibration data. The array should be a
@@ -180,7 +180,8 @@ class G(object):
         direction : str (either 'CW' or 'CCW')
             The direction to execute the arc in.
         radius : float
-            The radius of the arc.
+            The radius of the arc. A negative value will select the longer of
+            the two possible arc segments.
         helix_dim : str
             The linear dimension to complete the helix through
         helix_len : float
@@ -193,7 +194,7 @@ class G(object):
         dimensions = [k.lower() for k in kwargs.keys()]
         if 'x' in dimensions and 'y' in dimensions:
             plane_selector = 'G17'  # XY plane
-            axis = None
+            axis = helix_dim
         elif 'x' in dimensions:
             plane_selector = 'G18'  # XZ plane
             dimensions.remove('x')
@@ -210,17 +211,22 @@ class G(object):
         elif direction == 'CCW':
             command = 'G3'
 
-        args = ' '.join([(k.upper() + str(v)) for k, v in kwargs.items()])
-        if axis is not None:    
+        if axis is not None:
             self.write('G16 X Y {}'.format(axis))  # coordinate axis assignment
         self.write(plane_selector)
+        args = ' '.join([(k.upper() + str(v)) for k, v in kwargs.items()])
         if helix_dim is None:
             self.write('{} {} R{}'.format(command, args, radius))
         else:
             self.write('{} {} R{} G1 {}{}'.format(command, args, radius,
                                                   helix_dim.upper(), helix_len))
+            kwargs[helix_dim] = helix_len
+
         for dimension, delta in kwargs.items():
-            self.current_position[dimension] += delta
+            if self.movement_mode == 'relative':
+                self.current_position[dimension] += delta
+            else:
+                self.current_position[dimension] = delta
 
     def abs_arc(self, direction='CW', radius=1, **kwargs):
         self.absolute()
@@ -240,23 +246,33 @@ class G(object):
             Which direction to complete the rectangle in.
         start : str (either 'LL', 'UL', 'LR', 'UR')
             The start of the rectangle -  L/U = lower/upper, L/R = left/right
+            This assumes an origin in the lower left.
 
         """
-        if direction == 'CCW':
-            x, y = -x, -y
-
+        if direction is 'CCW':
+            x, y = -y, -x
         if start.upper() == 'LL':
             self.move(y=y)
             self.move(x=x)
             self.move(y=-y)
             self.move(x=-x)
-        else:
+        elif start.upper() == 'UL':
             self.move(x=x)
-            self.move(y=y)
+            self.move(y=-y)
             self.move(x=-x)
+            self.move(y=y)
+        elif start.upper() == 'UR':
+            self.move(y=-y)
+            self.move(x=-x)
+            self.move(y=y)
+            self.move(x=x)
+        elif start.upper() == 'LR':
+            self.move(x=-x)
+            self.move(y=y)
+            self.move(x=x)
             self.move(y=-y)
 
-    def meander(self, x, y, spacing, orientation='x'):
+    def meander(self, x, y, spacing, start='LL', orientation='x', tail=False):
         """ Infill a rectangle with a square wave meandering pattern. If the
         relevant dimension is not a multiple of the spacing, the spacing will
         be tweaked to ensure the dimensions work out.
@@ -269,9 +285,19 @@ class G(object):
             The heigh of the rectangle in the y dimension.
         spacing : float
             The space between parallel meander lines.
+        start : str (either 'LL', 'UL', 'LR', 'UR')
+            The start of the meander -  L/U = lower/upper, L/R = left/right
+            This assumes an origin in the lower left.
         orientation : str ('x' or 'y')
 
         """
+        if start.upper() == 'UL':
+            x, y = x, -y
+        elif start.upper() == 'UR':
+            x, y = -x, -y
+        elif start.upper() == 'LR':
+            x, y = -x, y
+
         # Major axis is the parallel lines, minor axis is the jog.
         if orientation == 'x':
             major, major_name = x, 'x'
@@ -285,15 +311,18 @@ class G(object):
         else:
             passes = abs(math.floor(minor / spacing))
         actual_spacing = minor / passes
-        if actual_spacing != spacing:
+        if abs(actual_spacing) != spacing:
             msg = ';WARNING! meander spacing updated from {} to {}'
             self.write(msg.format(spacing, actual_spacing))
         spacing = actual_spacing
         sign = 1
+        self.relative()
         for _ in range(int(passes)):
             self.move(**{major_name: (sign * major)})
             self.move(**{minor_name: spacing})
             sign = -1 * sign
+        if tail is False:
+            self.move(**{major_name: (sign * major)})
 
     def clip(self, axis='z', direction='+x', height=4):
         """ Move the given axis up to the given height while arcing in the
@@ -314,7 +343,7 @@ class G(object):
             orientation = 'CW' if direction[0] == '-' else 'CCW'
         else:
             orientation = 'CCW' if direction[0] == '-' else 'CW'
-        radius = height / 2.0
+        radius = abs(height / 2.0)
         kwargs = {
             secondary_axis: 0,
             axis: height,
