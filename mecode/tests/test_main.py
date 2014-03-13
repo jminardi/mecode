@@ -93,6 +93,7 @@ class TestG(unittest.TestCase):
         """
         self.assert_output(expected)
         self.assert_position({'x': 10, 'y': 10})
+
         self.g.abs_move(5, 5)
         expected += """
         G90
@@ -101,6 +102,7 @@ class TestG(unittest.TestCase):
         """
         self.assert_output(expected)
         self.assert_position({'x': 5, 'y': 5})
+
         self.g.abs_move(15, 0, D=5)
         expected += """
         G90
@@ -109,6 +111,207 @@ class TestG(unittest.TestCase):
         """
         self.assert_output(expected)
         self.assert_position({'x': 15, 'y': 0, 'D': 5})
+
+    def test_arc(self):
+        with self.assertRaises(RuntimeError):
+            self.g.arc()
+
+        self.g.arc(x=10, y=10)
+        expected = """
+        G17
+        G2 Y10 X10 R1
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 10, 'y': 10})
+
+        self.g.arc(x=5, A=0, direction='CCW', radius=5)
+        expected += """
+        G16 X Y A
+        G18
+        G3 A0 X5 R5
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 15, 'y': 10, 'A': 0})
+
+        self.g.arc(x=10, y=10, helix_dim='D', helix_len=10)
+        expected += """
+        G16 X Y D
+        G17
+        G2 Y10 X10 R1 G1 D10
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 25, 'y': 20, 'A': 0, 'D': 10})
+
+    def test_abs_arc(self):
+        self.g.abs_arc(x=10, y=10)
+        expected = """
+        G90
+        G17
+        G2 Y10 X10 R1
+        G91
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 10, 'y': 10})
+
+        self.g.abs_arc(x=10, y=10)
+        expected += """
+        G90
+        G17
+        G2 Y10 X10 R1
+        G91
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 10, 'y': 10})
+
+    def test_meander(self):
+        self.g.meander(2, 2, 1)
+        expected = """
+        G91
+        G1 X2.000000
+        G1 Y1.000000
+        G1 X-2.000000
+        G1 Y1.000000
+        G1 X2.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 2, 'y': 2})
+
+        self.g.meander(2, 2, 1.1)
+        expected += """
+        ;WARNING! meander spacing updated from 1.1 to 1.0
+        G91
+        G1 X2.000000
+        G1 Y1.000000
+        G1 X-2.000000
+        G1 Y1.000000
+        G1 X2.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 4, 'y': 4})
+
+        self.g.meander(2, 2, 1, start='UL')
+        expected += """
+        G91
+        G1 X2.000000
+        G1 Y-1.000000
+        G1 X-2.000000
+        G1 Y-1.000000
+        G1 X2.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 6, 'y': 2})
+
+        self.g.meander(2, 2, 1, start='UR')
+        expected += """
+        G91
+        G1 X-2.000000
+        G1 Y-1.000000
+        G1 X2.000000
+        G1 Y-1.000000
+        G1 X-2.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 4, 'y': 0})
+
+        self.g.meander(2, 2, 1, start='LR')
+        expected += """
+        G91
+        G1 X-2.000000
+        G1 Y1.000000
+        G1 X2.000000
+        G1 Y1.000000
+        G1 X-2.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 2, 'y': 2})
+
+        self.g.meander(2, 2, 1, start='LR', orientation='y')
+        expected += """
+        G91
+        G1 Y2.000000
+        G1 X-1.000000
+        G1 Y-2.000000
+        G1 X-1.000000
+        G1 Y2.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 0, 'y': 4})
+
+        self.g.meander(3, 2, 1, start='LR', orientation='y')
+        expected += """
+        G91
+        G1 Y2.000000
+        G1 X-1.000000
+        G1 Y-2.000000
+        G1 X-1.000000
+        G1 Y2.000000
+        G1 X-1.000000
+        G1 Y-2.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': -3, 'y': 4})
+
+    def test_clip(self):
+        self.g.clip()
+        expected = """
+        G16 X Y Z
+        G18
+        G3 X0 Z4 R2.0
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 0, 'z': 4})
+
+        self.g.clip(axis='A', direction='-y', height=10)
+        expected += """
+        G16 X Y A
+        G19
+        G2 Y0 A10 R5.0
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 0, 'y': 0, 'z': 4, 'A': 10})
+
+        self.g.clip(axis='A', direction='-y', height=-10)
+        expected += """
+        G16 X Y A
+        G19
+        G3 Y0 A-10 R5.0
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 0, 'y': 0, 'z': 4, 'A': 0})
+
+    def test_toggle_pressure(self):
+        self.g.toggle_pressure(0)
+        expected = 'Call togglePress P0'
+        self.assert_output(expected)
+
+    def test_align_nozzle(self):
+        self.g.align_nozzle('A')
+        expected = 'Call alignNozzle Q-15 R0.1 L1 I-72 J1'
+        self.assert_output(expected)
+        with self.assertRaises(RuntimeError):
+            self.g.align_nozzle('F')
+
+    def test_align_zero_nozzle(self):
+        self.g.align_zero_nozzle('A')
+        expected = 'Call alignZeroNozzle Q-15 R0.1 L1 I-72 J1'
+        self.assert_output(expected)
+        with self.assertRaises(RuntimeError):
+            self.g.align_zero_nozzle('F')
+
+    def test_set_pressure(self):
+        self.g.set_pressure(0, 10)
+        expected = 'Call setPress P0 Q10'
+        self.assert_output(expected)
+
+    def test_set_valve(self):
+        self.g.set_valve(0, 1)
+        expected = '$DO0.0=1'
+        self.assert_output(expected)
+
+    def test_save_alignment(self):
+        self.g.save_alignment()
+        expected = 'Call save_value Q1'
+        self.assert_output(expected)
 
     ### helper functions  #####################################################
 
