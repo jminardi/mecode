@@ -622,7 +622,7 @@ DFS zHold
 
     FILEWRITE $comport "U1"
     FILEREAD $comport 0 $strglob0
-    G1 X$x_dist Y-$x_dist F0.5
+    G1 X$x_dist Y-$x_dist F0.25
     FILEWRITE $comport "L1,0"
     FILEREAD $comport 0 $strglob0
     $STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
@@ -657,10 +657,12 @@ WHILE $count<$numsteps
 	$STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
 	$tempdistance = STRTODBL($STRGLOB1)
 	IF $tempdistance < $z_dif
-	        $z_dif=$tempdistance
-	        $z_past = $z_dif + 1
-		;$indicator = 1
-                MSGDISPLAY 1 "zdif recorded: " + $z_dif
+	        IF $tempdistance > 0
+	           $z_dif=$tempdistance
+	           $z_past = $z_dif + 1
+		  ;$indicator = 1
+                    MSGDISPLAY 1 "zdif recorded: " + $z_dif
+                ENDIF    
 	ENDIF
 	IF $indicator = 1
 	       IF $tempdistance > $z_past
