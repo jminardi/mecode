@@ -616,7 +616,7 @@ DFS zHold
     $zDwell = $L
     $start = (($zSweepRange/2)/1.414213)
     $x_dist = (($zSweepRange)/1.414213)
-    
+    $z_dif = 8
     G91
     G1 X-($start) Y$start F2
 
@@ -627,6 +627,17 @@ DFS zHold
     FILEREAD $comport 0 $strglob0
     $STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
     $z_dif = STRTODBL($STRGLOB1)
+    WHILE $z_dif < 0.1
+        G91
+        G1 X-$x_dist Y$x_dist F4
+        FILEWRITE $comport "U1"
+        FILEREAD $comport 0 $strglob0
+        G1 X$x_dist Y-$x_dist F0.1
+        FILEWRITE $comport "L1,0"
+        FILEREAD $comport 0 $strglob0
+        $STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
+        $z_dif = STRTODBL($STRGLOB1)
+    ENDWHILE
 
 ENDDFS
         
