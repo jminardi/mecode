@@ -628,15 +628,20 @@ DFS zHold
     $STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
     $z_dif = STRTODBL($STRGLOB1)
     WHILE $z_dif < 0.1
+        $z_dif = 8
         G91
         G1 X-$x_dist Y$x_dist F4
         FILEWRITE $comport "U1"
         FILEREAD $comport 0 $strglob0
         G1 X$x_dist Y-$x_dist F0.1
         FILEWRITE $comport "L1,0"
+        DWELL (0.1)
         FILEREAD $comport 0 $strglob0
         $STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
         $z_dif = STRTODBL($STRGLOB1)
+        IF $z_dif > 7.8
+            $z_dif = 0
+        ENDIF
     ENDWHILE
 
 ENDDFS
