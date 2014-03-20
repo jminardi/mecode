@@ -628,14 +628,24 @@ DFS zHold
     $STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
     $z_dif = STRTODBL($STRGLOB1)
     WHILE $z_dif < 0.1
+        FILECLOSE $comport
+       
         $z_dif = 8
         G91
         G1 X-$x_dist Y$x_dist F4
+        
+        $comport = FILEOPEN "COM8", 2
+	COMMINIT $comport, "baud=115200 parity=N data=8 stop=1" ; Initialize comport
+	COMMSETTIMEOUT $comport, -1, 0, 0
+        FILEREAD $comport 0 $strglob5
+        FILEWRITE $comport "PW,4" ; Select Program #4
+        FILEREAD $comport 0 $strglob1
+        DWELL(0.25)
         FILEWRITE $comport "U1"
         FILEREAD $comport 0 $strglob0
         G1 X$x_dist Y-$x_dist F0.1
         FILEWRITE $comport "L1,0"
-        DWELL (0.1)
+        DWELL(0.25)
         FILEREAD $comport 0 $strglob0
         $STRGLOB1 = STRMID ($STRGLOB0, 4, -1)
         $z_dif = STRTODBL($STRGLOB1)
