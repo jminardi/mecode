@@ -54,6 +54,7 @@ class G(object):
 
         self.current_position = defaultdict(float)
         self.movement_mode = 'relative'
+        self.position_history = []
 
     ### GCode Aliases  ########################################################
 
@@ -61,12 +62,7 @@ class G(object):
         args = self._format_args(x, y, kwargs)
         self.write('G92 ' + args)
 
-        if x is not None:
-            self.current_position['x'] = x
-        if y is not None:
-            self.current_position['y'] = y
-        for dimention, delta in kwargs.iteritems():
-            self.current_position[dimention] = delta
+        self._update_current_position(mode='absolute', x=x, y=y, **kwargs)
 
     def reset_home(self):
         # FIXME This does not work with internal current_position
@@ -145,20 +141,7 @@ class G(object):
             else:
                 kwargs[cal_axis] = delta
 
-        if self.movement_mode == 'relative':
-            if x is not None:
-                self.current_position['x'] += x
-            if y is not None:
-                self.current_position['y'] += y
-            for dimention, delta in kwargs.iteritems():
-                self.current_position[dimention] += delta
-        else:
-            if x is not None:
-                self.current_position['x'] = x
-            if y is not None:
-                self.current_position['y'] = y
-            for dimention, delta in kwargs.iteritems():
-                self.current_position[dimention] = delta
+        self._update_current_position(x=x, y=y, **kwargs)
 
         args = self._format_args(x, y, kwargs)
         self.write('G1 ' + args)
@@ -222,11 +205,7 @@ class G(object):
                                                   helix_dim.upper(), helix_len))
             kwargs[helix_dim] = helix_len
 
-        for dimension, delta in kwargs.items():
-            if self.movement_mode == 'relative':
-                self.current_position[dimension] += delta
-            else:
-                self.current_position[dimension] = delta
+        self._update_current_position(**kwargs)
 
     def abs_arc(self, direction='CW', radius=1, **kwargs):
         self.absolute()
@@ -437,6 +416,19 @@ class G(object):
             ax.scatter(xxr, yyr, zz, color='red')
         plt.show()
 
+    def view(self):
+        #from mpl_toolkits.mplot3d import Axes3D  #noqa
+        #import matplotlib.pyplot as plt
+        from mayavi import mlab
+
+        #ax = plt.figure().gca(projection='3d')
+        history = np.array(self.position_history[:500])
+        #x, y ,z = history[:, 0], history[:, 1], history[:, 2]
+        #ax.plot(x, y, z)
+        for fro, to in zip(history[:-1], history[1:]):
+            line = np.vstack([fro, to])
+            mlab.plot3d(line[:, 0], line[:, 1], line[:, 2])
+
     def write(self, statement):
         if self.print_lines:
             print statement
@@ -452,3 +444,27 @@ class G(object):
         args += ['{0}{1:f}'.format(k, v) for k, v in kwargs.items()]
         args = ' '.join(args)
         return args
+
+    def _update_current_position(self, mode='auto', x=None, y=None, **kwargs):
+        if mode == 'auto':
+            mode = self.movement_mode
+
+        if mode == 'relative':
+            if x is not None:
+                self.current_position['x'] += x
+            if y is not None:
+                self.current_position['y'] += y
+            for dimention, delta in kwargs.iteritems():
+                self.current_position[dimention] += delta
+        else:
+            if x is not None:
+                self.current_position['x'] = x
+            if y is not None:
+                self.current_position['y'] = y
+            for dimention, delta in kwargs.iteritems():
+                self.current_position[dimention] = delta
+
+        x = self.current_position['x']
+        y = self.current_position['y']
+        z = self.current_position['z']
+        self.position_history.append((x, y, z))
