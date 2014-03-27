@@ -30,9 +30,9 @@ class TestG(unittest.TestCase):
         expected += """
         G92 X10.000000 Y20.000000 A5.000000"""
         self.assert_output(expected)
-        self.assert_position({'A': 5.0, 'x': 10.0, 'y': 20.0})
+        self.assert_position({'A': 5.0, 'x': 10.0, 'y': 20.0, 'z': 0})
         g.set_home(y=0)
-        self.assert_position({'A': 5.0, 'x': 10.0, 'y': 0.0})
+        self.assert_position({'A': 5.0, 'x': 10.0, 'y': 0.0, 'z': 0})
 
     def test_reset_home(self):
         self.g.reset_home()
@@ -70,14 +70,14 @@ class TestG(unittest.TestCase):
         G91
         """
         self.assert_output(expected)
-        self.assert_position({'x': 0, 'y': 0})
+        self.assert_position({'x': 0, 'y': 0, 'z': 0})
 
     def test_move(self):
         g = self.g
         g.move(10, 10)
-        self.assert_position({'x': 10.0, 'y': 10.0})
+        self.assert_position({'x': 10.0, 'y': 10.0, 'z': 0})
         g.move(10, 10, A=50)
-        self.assert_position({'x': 20.0, 'y': 20.0, 'A': 50})
+        self.assert_position({'x': 20.0, 'y': 20.0, 'A': 50, 'z': 0})
         expected = """
         G1 X10.000000 Y10.000000
         G1 X10.000000 Y10.000000 A50.000000
@@ -92,7 +92,7 @@ class TestG(unittest.TestCase):
         G91
         """
         self.assert_output(expected)
-        self.assert_position({'x': 10, 'y': 10})
+        self.assert_position({'x': 10, 'y': 10, 'z': 0})
 
         self.g.abs_move(5, 5)
         expected += """
@@ -101,7 +101,7 @@ class TestG(unittest.TestCase):
         G91
         """
         self.assert_output(expected)
-        self.assert_position({'x': 5, 'y': 5})
+        self.assert_position({'x': 5, 'y': 5, 'z': 0})
 
         self.g.abs_move(15, 0, D=5)
         expected += """
@@ -110,7 +110,7 @@ class TestG(unittest.TestCase):
         G91
         """
         self.assert_output(expected)
-        self.assert_position({'x': 15, 'y': 0, 'D': 5})
+        self.assert_position({'x': 15, 'y': 0, 'D': 5, 'z': 0})
 
     def test_arc(self):
         with self.assertRaises(RuntimeError):
@@ -122,7 +122,7 @@ class TestG(unittest.TestCase):
         G2 Y10 X10 R1
         """
         self.assert_output(expected)
-        self.assert_position({'x': 10, 'y': 10})
+        self.assert_position({'x': 10, 'y': 10, 'z': 0})
 
         self.g.arc(x=5, A=0, direction='CCW', radius=5)
         expected += """
@@ -131,7 +131,7 @@ class TestG(unittest.TestCase):
         G3 A0 X5 R5
         """
         self.assert_output(expected)
-        self.assert_position({'x': 15, 'y': 10, 'A': 0})
+        self.assert_position({'x': 15, 'y': 10, 'A': 0, 'z': 0})
 
         self.g.arc(x=10, y=10, helix_dim='D', helix_len=10)
         expected += """
@@ -140,7 +140,7 @@ class TestG(unittest.TestCase):
         G2 Y10 X10 R1 G1 D10
         """
         self.assert_output(expected)
-        self.assert_position({'x': 25, 'y': 20, 'A': 0, 'D': 10})
+        self.assert_position({'x': 25, 'y': 20, 'A': 0, 'D': 10, 'z': 0})
 
     def test_abs_arc(self):
         self.g.abs_arc(x=10, y=10)
@@ -151,7 +151,7 @@ class TestG(unittest.TestCase):
         G91
         """
         self.assert_output(expected)
-        self.assert_position({'x': 10, 'y': 10})
+        self.assert_position({'x': 10, 'y': 10, 'z': 0})
 
         self.g.abs_arc(x=10, y=10)
         expected += """
@@ -161,7 +161,88 @@ class TestG(unittest.TestCase):
         G91
         """
         self.assert_output(expected)
-        self.assert_position({'x': 10, 'y': 10})
+        self.assert_position({'x': 10, 'y': 10, 'z': 0})
+
+    def test_rect(self):
+        self.g.rect(10, 5)
+        expected = """
+        G1 Y5.000000
+        G1 X10.000000
+        G1 Y-5.000000
+        G1 X-10.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 0, 'y': 0, 'z': 0})
+
+        self.g.rect(10, 5, start='UL')
+        expected += """
+        G1 X10.000000
+        G1 Y-5.000000
+        G1 X-10.000000
+        G1 Y5.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 0, 'y': 0, 'z': 0})
+
+        self.g.rect(10, 5, start='UR')
+        expected += """
+        G1 Y-5.000000
+        G1 X-10.000000
+        G1 Y5.000000
+        G1 X10.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 0, 'y': 0, 'z': 0})
+
+        self.g.rect(10, 5, start='LR')
+        expected += """
+        G1 X-10.000000
+        G1 Y5.000000
+        G1 X10.000000
+        G1 Y-5.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 0, 'y': 0, 'z': 0})
+
+        self.g.rect(10, 5, start='LL', direction='CCW')
+        expected += """
+        G1 X10.000000
+        G1 Y5.000000
+        G1 X-10.000000
+        G1 Y-5.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 0, 'y': 0, 'z': 0})
+
+        self.g.rect(10, 5, start='UL', direction='CCW')
+        expected += """
+        G1 Y-5.000000
+        G1 X10.000000
+        G1 Y5.000000
+        G1 X-10.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 0, 'y': 0, 'z': 0})
+
+        self.g.rect(10, 5, start='UR', direction='CCW')
+        expected += """
+        G1 X-10.000000
+        G1 Y-5.000000
+        G1 X10.000000
+        G1 Y5.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 0, 'y': 0, 'z': 0})
+
+        self.g.rect(10, 5, start='LR', direction='CCW')
+        expected += """
+        G1 Y5.000000
+        G1 X-10.000000
+        G1 Y-5.000000
+        G1 X10.000000
+        """
+        self.assert_output(expected)
+        self.assert_position({'x': 0, 'y': 0, 'z': 0})
 
     def test_meander(self):
         self.g.meander(2, 2, 1)
@@ -174,7 +255,7 @@ class TestG(unittest.TestCase):
         G1 X2.000000
         """
         self.assert_output(expected)
-        self.assert_position({'x': 2, 'y': 2})
+        self.assert_position({'x': 2, 'y': 2, 'z': 0})
 
         self.g.meander(2, 2, 1.1)
         expected += """
@@ -187,7 +268,7 @@ class TestG(unittest.TestCase):
         G1 X2.000000
         """
         self.assert_output(expected)
-        self.assert_position({'x': 4, 'y': 4})
+        self.assert_position({'x': 4, 'y': 4, 'z': 0})
 
         self.g.meander(2, 2, 1, start='UL')
         expected += """
@@ -199,7 +280,7 @@ class TestG(unittest.TestCase):
         G1 X2.000000
         """
         self.assert_output(expected)
-        self.assert_position({'x': 6, 'y': 2})
+        self.assert_position({'x': 6, 'y': 2, 'z': 0})
 
         self.g.meander(2, 2, 1, start='UR')
         expected += """
@@ -211,7 +292,7 @@ class TestG(unittest.TestCase):
         G1 X-2.000000
         """
         self.assert_output(expected)
-        self.assert_position({'x': 4, 'y': 0})
+        self.assert_position({'x': 4, 'y': 0, 'z': 0})
 
         self.g.meander(2, 2, 1, start='LR')
         expected += """
@@ -223,7 +304,7 @@ class TestG(unittest.TestCase):
         G1 X-2.000000
         """
         self.assert_output(expected)
-        self.assert_position({'x': 2, 'y': 2})
+        self.assert_position({'x': 2, 'y': 2, 'z': 0})
 
         self.g.meander(2, 2, 1, start='LR', orientation='y')
         expected += """
@@ -235,7 +316,7 @@ class TestG(unittest.TestCase):
         G1 Y2.000000
         """
         self.assert_output(expected)
-        self.assert_position({'x': 0, 'y': 4})
+        self.assert_position({'x': 0, 'y': 4, 'z': 0})
 
         self.g.meander(3, 2, 1, start='LR', orientation='y')
         expected += """
@@ -249,7 +330,7 @@ class TestG(unittest.TestCase):
         G1 Y-2.000000
         """
         self.assert_output(expected)
-        self.assert_position({'x': -3, 'y': 4})
+        self.assert_position({'x': -3, 'y': 4, 'z': 0})
 
     def test_clip(self):
         self.g.clip()
@@ -259,7 +340,7 @@ class TestG(unittest.TestCase):
         G3 X0 Z4 R2.0
         """
         self.assert_output(expected)
-        self.assert_position({'x': 0, 'z': 4})
+        self.assert_position({'y': 0, 'x': 0, 'z': 4})
 
         self.g.clip(axis='A', direction='-y', height=10)
         expected += """
