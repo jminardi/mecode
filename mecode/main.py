@@ -1,11 +1,37 @@
-""" mecode is a collection of functions desiged to simplify GCode generation.
+"""
+Mecode
+======
+GCode for all.
 
-Relative movements are assumed, unless stated in the function name. Any
-function that uses absolute mode always resets back to relative. Similarly, the
-arcing plane is always reset to XY after arcing through a different plane.
+Mecode is designed to simplify GCode generation. It is not a slicer, and it
+can not convert CAD models to 3D printer ready code. It is simply a convenience
+layer just above GCode. If you have a project that requires you to write your
+own GCode, then mecode is for you.
 
-Author: Jack Minardi
-Email: jminardi@seas.harvard.edu
+To get started, simply instantiate the `G` object and use its methods to
+describe your tool path:
+
+>>> from mecode import G
+>>> g = G()
+>>> g.move(x=10)
+>>> g.rect(5, 3)
+>>> g.arc(x=-5, y=0)
+>>> g.teardown()
+
+By default mecode will simply print the lines to stdout. If you'd rather write
+to a file you can instead supply a filename and turn the printing off when
+initializing the `G` objects:
+
+>>> g = G(outfile='path/to/file.gcode', print_lines=False)
+
+**NOTE:** `g.teardown()` must be called after all commands if you are writing
+to a file, otherwise it is optional.
+
+
+* *Author:* Jack Minardi
+* *Email:* jminardi@seas.harvard.edu
+
+This software was developed by the Lewis Lab at Harvard University.
 
 """
 
@@ -22,26 +48,28 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 class G(object):
 
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
-                 cal_data=None, cal_axis='A'):
+                 aerotech_include=True, cal_data=None, cal_axis='A'):
         """
         Parameters
         ----------
-        outfile : path or None
+        outfile : path or None (default: None)
             If a path is specified, the compiled gcode will be writen to that
             file.
-        print_lines : bool
+        print_lines : bool (default: True)
             Whether or not to print the compiled GCode to stdout
-        header : path
+        header : path or None (default: None)
             Optional path to a file containing lines to be written at the
             beginning of the output file
-        footer : path
+        footer : path or None (default: None)
             Optional path to a file containing lines to be written at the end
             of the output file.
-        cal_data : Nx3 array or None
+        aerotech_include : bool (default: True)
+            If true, add aerotech specific functions and var defs to outfile.
+        cal_data : Nx3 array or None (default: None)
             Numpy array representing calibration data. The array should be a
             series of x, y, z points, where z is the delta to adjust for the
             given x, y.
-        cal_axis : str
+        cal_axis : str (default: 'A')
             The axis that the calibration deltas should apply to.
 
         """
@@ -49,12 +77,15 @@ class G(object):
         self.print_lines = print_lines
         self.header = header
         self.footer = footer
+        self.aerotech_include = aerotech_include
         self.cal_axis = cal_axis
         self.cal_data = cal_data
 
         self.current_position = defaultdict(float)
         self.movement_mode = 'relative'
         self.position_history = []
+
+        self.setup()
 
     ### GCode Aliases  ########################################################
 
@@ -126,7 +157,7 @@ class G(object):
 
         """
         outfile = self.outfile
-        if outfile is not None:
+        if outfile is not None and self.aerotech_include is True:
             if isinstance(outfile, basestring):
                 outfile = open(outfile, 'w+')  # open it if it is a path
             self.outfile = outfile
@@ -209,7 +240,7 @@ class G(object):
         self.move(x=x, y=y, **kwargs)
         self.relative()
 
-    def arc(self, direction='CW', radius=1, helix_dim=None, helix_len=0,
+    def arc(self, direction='CW', radius='auto', helix_dim=None, helix_len=0,
             **kwargs):
         """ Arc to the given point with the given radius and in the given
         direction. If helix_dim and helix_len are specified then the tool head
@@ -220,12 +251,13 @@ class G(object):
         ----------
         points : floats
             Must specify two points as kwargs, e.g. X=5, Y=5
-        direction : str (either 'CW' or 'CCW')
+        direction : str (either 'CW' or 'CCW') (default: 'CW')
             The direction to execute the arc in.
-        radius : float
+        radius : 'auto' or float (default: 'auto')
             The radius of the arc. A negative value will select the longer of
-            the two possible arc segments.
-        helix_dim : str
+            the two possible arc segments. If auto is selected the radius will
+            be set to half the linear distance to desired point.
+        helix_dim : str or None (default: None)
             The linear dimension to complete the helix through
         helix_len : float
             The length to move in the linear helix dimension.
@@ -265,6 +297,21 @@ class G(object):
         elif direction == 'CCW':
             command = 'G3'
 
+        values = kwargs.values()
+        if self.movement_mode == 'relative':
+            dist = math.sqrt(values[0] ** 2 + values[1] ** 2)
+        else:
+            k = kwargs.keys()
+            cp = self.current_position
+            dist = math.sqrt(
+                (cp[k[0]] - values[0]) ** 2 + (cp[k[1]] - values[1]) ** 2
+            )
+        if radius == 'auto':
+            radius = dist / 2.0
+        elif radius < dist / 2.0:
+            msg = 'Radius {} to small for distance {}'.format(radius, dist)
+            raise RuntimeError(msg)
+
         if axis is not None:
             self.write('G16 X Y {}'.format(axis))  # coordinate axis assignment
         self.write(plane_selector)
@@ -278,7 +325,7 @@ class G(object):
 
         self._update_current_position(**kwargs)
 
-    def abs_arc(self, direction='CW', radius=1, **kwargs):
+    def abs_arc(self, direction='CW', radius='auto', **kwargs):
         """ Same as `arc` method, but positions are interpreted as absolute.
         """
         self.absolute()
@@ -294,9 +341,9 @@ class G(object):
             The width of the rectangle in the x dimension.
         y : float
             The heigh of the rectangle in the y dimension.
-        direction : str (either 'CW' or 'CCW')
+        direction : str (either 'CW' or 'CCW') (default: 'CW')
             Which direction to complete the rectangle in.
-        start : str (either 'LL', 'UL', 'LR', 'UR')
+        start : str (either 'LL', 'UL', 'LR', 'UR') (default: 'LL')
             The start of the rectangle -  L/U = lower/upper, L/R = left/right
             This assumes an origin in the lower left.
 
@@ -365,10 +412,10 @@ class G(object):
             The heigh of the rectangle in the y dimension.
         spacing : float
             The space between parallel meander lines.
-        start : str (either 'LL', 'UL', 'LR', 'UR')
+        start : str (either 'LL', 'UL', 'LR', 'UR') (default: 'LL')
             The start of the meander -  L/U = lower/upper, L/R = left/right
             This assumes an origin in the lower left.
-        orientation : str ('x' or 'y')
+        orientation : str ('x' or 'y') (default: 'x')
 
         Examples
         --------
@@ -422,11 +469,11 @@ class G(object):
 
         Parameters
         ----------
-        axis : str
+        axis : str (default: 'z')
             The axis to move, e.g. 'z'
-        direction : str (either +-x or +-y)
+        direction : str (either +-x or +-y) (default: '+x')
             The direction to arc through
-        height : float
+        height : float (default: 4)
             The height to end up at
 
         Examples
@@ -581,4 +628,3 @@ class G(object):
         y = self.current_position['y']
         z = self.current_position['z']
         self.position_history.append((x, y, z))
-
