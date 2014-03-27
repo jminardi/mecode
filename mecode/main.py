@@ -1,32 +1,42 @@
 """
 Mecode
 ======
-GCode for all.
 
-Mecode is designed to simplify GCode generation. It is not a slicer, and it
-can not convert CAD models to 3D printer ready code. It is simply a convenience
-layer just above GCode. If you have a project that requires you to write your
-own GCode, then mecode is for you.
+### GCode for all
 
-To get started, simply instantiate the `G` object and use its methods to
-describe your tool path:
+Mecode is designed to simplify GCode generation. It is not a slicer, thus it
+can not convert CAD models to 3D printer ready code. It simply provides a
+convenient, human-readable layer just above GCode. If you often find
+yourself manually writing your own GCode, then mecode is for you.
 
->>> from mecode import G
->>> g = G()
->>> g.move(x=10)
->>> g.rect(5, 3)
->>> g.arc(x=-5, y=0)
->>> g.teardown()
+Basic Use
+---------
+To use, simply instantiate the `G` object and use its methods to trace your
+desired tool path. ::
 
-By default mecode will simply print the lines to stdout. If you'd rather write
-to a file you can instead supply a filename and turn the printing off when
-initializing the `G` objects:
+    from mecode import G
+    g = G()
+    g.move(10, 10)  # move 10mm in x and 10mm in y
+    g.arc(x=10, y=5, radius=20, direction='CCW')  # counterclockwise arc with a radius of 5
+    g.meander(5, 10, spacing=1)  # trace a rectangle meander with 1mm spacing between the passes
+    g.abs_move(x=1, y=1)  # move the tool head to position (1, 1)
+    g.home()  # move the tool head to the origin (0, 0)
 
->>> g = G(outfile='path/to/file.gcode', print_lines=False)
+By default `mecode` simply prints the generated GCode to stdout. If instead you
+want to generate a file, you can pass a filename and turn off the printing when
+instantiating the `G` object. ::
 
-**NOTE:** `g.teardown()` must be called after all commands if you are writing
-to a file, otherwise it is optional.
+    g = G(outfile='path/to/file.gcode', print_lines=False)
 
+*NOTE:* `g.teardown()` must be called after all commands are executed if you
+are writing to a file.
+
+The resulting toolpath can be visualized in 3D using the `mayavi` package with
+the `view()` method ::
+
+    g = G()
+    g.meander(10, 10, 1)
+    g.view()
 
 * *Author:* Jack Minardi
 * *Email:* jminardi@seas.harvard.edu
@@ -38,9 +48,6 @@ This software was developed by the Lewis Lab at Harvard University.
 import math
 import os
 from collections import defaultdict
-
-import numpy as np
-from scipy.interpolate import griddata
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -174,7 +181,7 @@ class G(object):
         method must be called once after all commands.
 
         """
-        if self.outfile is not None:
+        if self.outfile is not None and self.aerotech_include is True:
             lines = open(os.path.join(HERE, 'footer.txt')).readlines()
             self.outfile.writelines(lines)
             self.outfile.close()
@@ -563,6 +570,7 @@ class G(object):
     ### Private Interface  ####################################################
 
     def interpolate(self, x, y):
+        from scipy.interpolate import griddata
         cal_data = self.cal_data
         delta = griddata((cal_data[:, 0], cal_data[:, 1]), cal_data[:, 2],
                          (x, y), method='linear', fill_value=0)
@@ -571,6 +579,7 @@ class G(object):
     def show_interpolation_surface(self, interpolate=True):
         from mpl_toolkits.mplot3d import Axes3D  #noqa
         import matplotlib.pyplot as plt
+        import numpy as np
         ax = plt.figure().gca(projection='3d')
         d = self.cal_data
         ax.scatter(d[:, 0], d[:, 1], d[:, 2])
@@ -586,6 +595,7 @@ class G(object):
 
     def view(self):
         from mayavi import mlab
+        import numpy as np
         history = np.array(self.position_history)
         mlab.plot3d(history[:, 0], history[:, 1], history[:, 2])
 
