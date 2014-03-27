@@ -59,35 +59,71 @@ class G(object):
     ### GCode Aliases  ########################################################
 
     def set_home(self, x=None, y=None, **kwargs):
+        """ Set the current position to the given position without moving.
+
+        Example
+        -------
+        >>> # set the current position to X=0, Y=0
+        >>> g.set_home(0, 0)
+
+        """
         args = self._format_args(x, y, kwargs)
         self.write('G92 ' + args)
 
         self._update_current_position(mode='absolute', x=x, y=y, **kwargs)
 
     def reset_home(self):
+        """ Reset the position back to machine coordinates without moving.
+        """
         # FIXME This does not work with internal current_position
         # FIXME You must call an abs_move after this to re-sync
         # current_position
         self.write('G92.1')
 
     def relative(self):
+        """ Enter relative movement mode, in general this method should not be
+        used, most methods handle it automatically.
+
+        """
         self.write('G91')
         self.movement_mode = 'relative'
 
     def absolute(self):
+        """ Enter absolute movement mode, in general this method should not be
+        used, most methods handle it automatically.
+
+        """
         self.write('G90')
         self.movement_mode = 'absolute'
 
     def feed(self, rate):
+        """ Set the feed rate (tool head speed) in mm/s
+
+        Parameters
+        ----------
+        rate : float
+            The speed to move the tool head in mm/s.
+
+        """
         self.write('F{}'.format(rate))
 
     def dwell(self, time):
+        """ Pause code executions for the given amount of time.
+
+        Parameters
+        ----------
+        time : float
+            Time in seconds to pause code execution.
+
+        """
         self.write('G4 P{}'.format(time))
 
     ### Composed Functions  ###################################################
 
     def setup(self):
-        """ Set the environment into a consistent state to start off.
+        """ Set the environment into a consistent state to start off. This
+        method must be called before any other commands.
+
         """
         outfile = self.outfile
         if outfile is not None:
@@ -103,7 +139,9 @@ class G(object):
                 outfile.write('\n')
 
     def teardown(self):
-        """ Close the outfile file after writing the footer if opened.
+        """ Close the outfile file after writing the footer if opened. This
+        method must be called once after all commands.
+
         """
         if self.outfile is not None:
             lines = open(os.path.join(HERE, 'footer.txt')).readlines()
@@ -115,9 +153,27 @@ class G(object):
                 self.outfile.write('\n')
 
     def home(self):
+        """ Move the tool head to the home position (X=0, Y=0).
+        """
         self.abs_move(x=0, y=0)
 
     def move(self, x=None, y=None, **kwargs):
+        """ Move the tool head to the given position. This method operates in
+        relative mode unless a manual call to `absolute` was given previously.
+        If an absolute movement is desired, the `abs_move` method is
+        recommended instead.
+
+        Examples
+        --------
+        >>> # move the tool head 10 mm in x and 10 mm in y
+        >>> g.move(x=10, y=10)
+        >>> # the x and y keywords may be omitted:
+        >>> g.move(10, 10)
+
+        >>> # move the A axis up 20 mm
+        >>> g.move(A=20)
+
+        """
         if self.cal_data is not None:
             cal_axis = self.cal_axis
             x_, y_ = self.current_position['x'], self.current_position['y']
@@ -147,6 +203,8 @@ class G(object):
         self.write('G1 ' + args)
 
     def abs_move(self, x=None, y=None, **kwargs):
+        """ Same as `move` method, but positions are interpreted as absolute.
+        """
         self.absolute()
         self.move(x=x, y=y, **kwargs)
         self.relative()
@@ -154,7 +212,9 @@ class G(object):
     def arc(self, direction='CW', radius=1, helix_dim=None, helix_len=0,
             **kwargs):
         """ Arc to the given point with the given radius and in the given
-        direction
+        direction. If helix_dim and helix_len are specified then the tool head
+        will also perform a linear movement through the given dimension while
+        completing the arc.
 
         Parameters
         ----------
@@ -169,6 +229,17 @@ class G(object):
             The linear dimension to complete the helix through
         helix_len : float
             The length to move in the linear helix dimension.
+
+        Examples
+        --------
+        >>> # arc 10 mm up in y and 10 mm over in x with a radius of 20.
+        >>> g.arc(x-10, y=10, radius=20)
+
+        >>> # move 10 mm up on the A axis, arcing through y with a radius of 20
+        >>> g.arc(A=10, y=0, radius=20)
+
+        >>> # arc through x and y while moving linearly on axis A
+        >>> g.arc(x=10, y=10, radius=50, helix_dim='A', helix_len=5)
 
         """
         msg = 'Must specify point with 2 dimensions as keywords, e.g. X=0, Y=10'
@@ -208,6 +279,8 @@ class G(object):
         self._update_current_position(**kwargs)
 
     def abs_arc(self, direction='CW', radius=1, **kwargs):
+        """ Same as `arc` method, but positions are interpreted as absolute.
+        """
         self.absolute()
         self.arc(direction=direction, radius=radius, **kwargs)
         self.relative()
@@ -218,7 +291,7 @@ class G(object):
         Parameters
         ----------
         x : float
-            The width of the rectange in the x dimension.
+            The width of the rectangle in the x dimension.
         y : float
             The heigh of the rectangle in the y dimension.
         direction : str (either 'CW' or 'CCW')
@@ -227,29 +300,57 @@ class G(object):
             The start of the rectangle -  L/U = lower/upper, L/R = left/right
             This assumes an origin in the lower left.
 
+        Examples
+        --------
+        >>> # trace a 10x10 clockwise square, starting in the lower left corner
+        >>> g.rect(10, 10)
+
+        >>> # 1x5 counterclockwise rect starting in the upper right corner
+        >>> g.rect(1, 5, direction='CCW', start='UR')
+
         """
-        if direction is 'CCW':
-            x, y = -y, -x
-        if start.upper() == 'LL':
-            self.move(y=y)
-            self.move(x=x)
-            self.move(y=-y)
-            self.move(x=-x)
-        elif start.upper() == 'UL':
-            self.move(x=x)
-            self.move(y=-y)
-            self.move(x=-x)
-            self.move(y=y)
-        elif start.upper() == 'UR':
-            self.move(y=-y)
-            self.move(x=-x)
-            self.move(y=y)
-            self.move(x=x)
-        elif start.upper() == 'LR':
-            self.move(x=-x)
-            self.move(y=y)
-            self.move(x=x)
-            self.move(y=-y)
+        if direction == 'CW':
+            if start.upper() == 'LL':
+                self.move(y=y)
+                self.move(x=x)
+                self.move(y=-y)
+                self.move(x=-x)
+            elif start.upper() == 'UL':
+                self.move(x=x)
+                self.move(y=-y)
+                self.move(x=-x)
+                self.move(y=y)
+            elif start.upper() == 'UR':
+                self.move(y=-y)
+                self.move(x=-x)
+                self.move(y=y)
+                self.move(x=x)
+            elif start.upper() == 'LR':
+                self.move(x=-x)
+                self.move(y=y)
+                self.move(x=x)
+                self.move(y=-y)
+        elif direction == 'CCW':
+            if start.upper() == 'LL':
+                self.move(x=x)
+                self.move(y=y)
+                self.move(x=-x)
+                self.move(y=-y)
+            elif start.upper() == 'UL':
+                self.move(y=-y)
+                self.move(x=x)
+                self.move(y=y)
+                self.move(x=-x)
+            elif start.upper() == 'UR':
+                self.move(x=-x)
+                self.move(y=-y)
+                self.move(x=x)
+                self.move(y=y)
+            elif start.upper() == 'LR':
+                self.move(y=y)
+                self.move(x=-x)
+                self.move(y=-y)
+                self.move(x=x)
 
     def meander(self, x, y, spacing, start='LL', orientation='x', tail=False):
         """ Infill a rectangle with a square wave meandering pattern. If the
@@ -268,6 +369,18 @@ class G(object):
             The start of the meander -  L/U = lower/upper, L/R = left/right
             This assumes an origin in the lower left.
         orientation : str ('x' or 'y')
+
+        Examples
+        --------
+        >>> # meander through a 10x10 sqaure with a spacing of 1mm starting in
+        >>> # the lower left.
+        >>> g.meander(10, 10, 1)
+
+        >>> # 3x5 meander with a spacing of 1 and with parallel lines through y
+        >>> g.meander(3, 5, spacing=1, orientation='y')
+
+        >>> # 10x5 meander with a spacing of 2 starting in the upper right.
+        >>> g.meander(10, 5, 2, start='UR')
 
         """
         if start.upper() == 'UL':
@@ -315,6 +428,14 @@ class G(object):
             The direction to arc through
         height : float
             The height to end up at
+
+        Examples
+        --------
+        >>> # move 'z' axis up 4mm while arcing through positive x
+        >>> g.clip()
+
+        >>> # move 'A' axis up 10mm while arcing through negative y
+        >>> g.clip('A', height=10, direction='-y')
 
         """
         secondary_axis = direction[1]
@@ -417,17 +538,9 @@ class G(object):
         plt.show()
 
     def view(self):
-        #from mpl_toolkits.mplot3d import Axes3D  #noqa
-        #import matplotlib.pyplot as plt
         from mayavi import mlab
-
-        #ax = plt.figure().gca(projection='3d')
-        history = np.array(self.position_history[:500])
-        #x, y ,z = history[:, 0], history[:, 1], history[:, 2]
-        #ax.plot(x, y, z)
-        for fro, to in zip(history[:-1], history[1:]):
-            line = np.vstack([fro, to])
-            mlab.plot3d(line[:, 0], line[:, 1], line[:, 2])
+        history = np.array(self.position_history)
+        mlab.plot3d(history[:, 0], history[:, 1], history[:, 2])
 
     def write(self, statement):
         if self.print_lines:
@@ -468,3 +581,4 @@ class G(object):
         y = self.current_position['y']
         z = self.current_position['z']
         self.position_history.append((x, y, z))
+
