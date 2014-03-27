@@ -3,19 +3,27 @@ mecode
 
 GCode for all
 
+Mecode is designed to simplify GCode generation. It is not a slicer, and it
+can not convert CAD models to 3D printer ready code. It is simply a convenience
+layer just above GCode. If you have a project that requires you to write your
+own GCode, then mecode is for you.
+
+Installation
+------------
+```bash
+$ git clone https://github.com/jminardi/mecode.git
+$ cd mecode
+$ python setup.py install
+```
+
 
 TODO
-====
+----
 * split footer.txt into different files.
-* upper or lowercase kwargs (decorator?)
 * replace "z" with either A, B, C, or D (or anything else)
 * add pressure_boxes to `setup()` method
 * is set_valve the best name?
 * finalize interface on aerotech functions.
-* set_home should default to X=0, Y=0
 * build out multi-nozzle support
     * include multi-nozzle support in view method.
-* check if arc radius is possible (could be too small)
-* add 'auto' radius option, which is sets it to half the length
-* add default values to docstrings
 * factor out aerotech specific methods into their own class
