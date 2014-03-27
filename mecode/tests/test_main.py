@@ -11,7 +11,8 @@ class TestG(unittest.TestCase):
 
     def setUp(self):
         self.outfile = TemporaryFile()
-        self.g = G(outfile=self.outfile, print_lines=False)
+        self.g = G(outfile=self.outfile, print_lines=False,
+                   aerotech_include=False)
 
     def tearDown(self):
         self.g.teardown()
@@ -58,7 +59,8 @@ class TestG(unittest.TestCase):
         self.assert_output('G4 P10')
 
     def test_setup(self):
-        self.g.setup()
+        self.outfile = TemporaryFile()
+        self.g = G(outfile=self.outfile, print_lines=False)
         expected = open(os.path.join(HERE, '../header.txt')).read()
         self.assert_output(expected)
 
@@ -116,13 +118,13 @@ class TestG(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.g.arc()
 
-        self.g.arc(x=10, y=10)
+        self.g.arc(x=10, y=0)
         expected = """
         G17
-        G2 Y10 X10 R1
+        G2 Y0 X10 R5.0
         """
         self.assert_output(expected)
-        self.assert_position({'x': 10, 'y': 10, 'z': 0})
+        self.assert_position({'x': 10, 'y': 0, 'z': 0})
 
         self.g.arc(x=5, A=0, direction='CCW', radius=5)
         expected += """
@@ -131,37 +133,40 @@ class TestG(unittest.TestCase):
         G3 A0 X5 R5
         """
         self.assert_output(expected)
-        self.assert_position({'x': 15, 'y': 10, 'A': 0, 'z': 0})
+        self.assert_position({'x': 15, 'y': 0, 'A': 0, 'z': 0})
 
-        self.g.arc(x=10, y=10, helix_dim='D', helix_len=10)
+        self.g.arc(x=0, y=10, helix_dim='D', helix_len=10)
         expected += """
         G16 X Y D
         G17
-        G2 Y10 X10 R1 G1 D10
+        G2 Y10 X0 R5.0 G1 D10
         """
         self.assert_output(expected)
-        self.assert_position({'x': 25, 'y': 20, 'A': 0, 'D': 10, 'z': 0})
+        self.assert_position({'x': 15, 'y': 10, 'A': 0, 'D': 10, 'z': 0})
+
+        with self.assertRaises(RuntimeError):
+            self.g.arc(x=10, y=10, radius=1)
 
     def test_abs_arc(self):
-        self.g.abs_arc(x=10, y=10)
+        self.g.abs_arc(x=0, y=10)
         expected = """
         G90
         G17
-        G2 Y10 X10 R1
+        G2 Y10 X0 R5.0
         G91
         """
         self.assert_output(expected)
-        self.assert_position({'x': 10, 'y': 10, 'z': 0})
+        self.assert_position({'x': 0, 'y': 10, 'z': 0})
 
-        self.g.abs_arc(x=10, y=10)
+        self.g.abs_arc(x=0, y=10)
         expected += """
         G90
         G17
-        G2 Y10 X10 R1
+        G2 Y10 X0 R0.0
         G91
         """
         self.assert_output(expected)
-        self.assert_position({'x': 10, 'y': 10, 'z': 0})
+        self.assert_position({'x': 0, 'y': 10, 'z': 0})
 
     def test_rect(self):
         self.g.rect(10, 5)
