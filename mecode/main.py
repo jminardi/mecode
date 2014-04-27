@@ -55,7 +55,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 class G(object):
 
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
-                 aerotech_include=True, cal_data=None, cal_axis='A'):
+                 aerotech_include=True, cal_data=None, cal_axis='A',
+                 direct_write=False, aero_host='localhost', aero_port=8000,):
         """
         Parameters
         ----------
@@ -78,6 +79,7 @@ class G(object):
             given x, y.
         cal_axis : str (default: 'A')
             The axis that the calibration deltas should apply to.
+        direct_write
 
         """
         self.outfile = outfile
@@ -91,6 +93,11 @@ class G(object):
         self.current_position = defaultdict(float)
         self.movement_mode = 'relative'
         self.position_history = []
+        
+        self.direct_write = direct_write
+        self.aero_host = aero_host
+        self.aero_port = aero_port
+        self._socket = None
 
         self.setup()
 
@@ -189,6 +196,8 @@ class G(object):
                 lines = open(self.footer).readlines()
                 self.outfile.writelines(lines)
                 self.outfile.write('\n')
+        if self._socket is not None:
+            self._socket.close()
 
     def home(self):
         """ Move the tool head to the home position (X=0, Y=0).
@@ -604,6 +613,15 @@ class G(object):
             print statement
         if self.outfile is not None:
             self.outfile.write(statement + '\n')
+        if self.direct_write is True:
+            if self._socket is None:
+                import socket
+                self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self._socket.connect((self.aero_host, self.aero_port))
+            self._socket.send(statement + '\n')
+            response = self._socket.recv(8192)
+            return response
+            
 
     def _format_args(self, x, y, kwargs):
         args = []
