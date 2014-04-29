@@ -337,7 +337,7 @@ DFS alignZeroNozzle
 	$deltafast = $J
 
         ;#$Ax = 483
-	;#$Ay = 317
+	;#$Ay = (317+10)
 	;#$Bx = 379
 	;#$By = 317
 	;#$Cx = 275
@@ -348,7 +348,7 @@ DFS alignZeroNozzle
 	;#$Py = 345
 	
 	$Ax = 586.075
-	$Ay = 367.8285
+	$Ay = (367.8285+10); 377.6805;
 	$Bx = 482.075
 	$By = 367.8285
 	$Cx = 378.075
@@ -715,6 +715,8 @@ IF $nozzle = 1
     FILEWRITE $align_save "$Ay_dif = " + $Ay_dif
     FILEWRITE $align_save "$zMeasureA = " + $zMeasureA
     FILEWRITE $align_save "$Az_dif = " + $Az_dif
+    FILEWRITE $align_save "$Ax = " + $Ax
+    FILEWRITE $align_save "$Ay = " + $Ay
 ENDIF
 IF $nozzle = 2
     $align_save = FILEOPEN "C:\Users\Lewis Group\Desktop\Alignment\alignment_values_2.txt", 0
@@ -722,6 +724,8 @@ IF $nozzle = 2
     FILEWRITE $align_save "$By_dif = " + $By_dif
     FILEWRITE $align_save "$zMeasureB = " + $zMeasureB
     FILEWRITE $align_save "$Bz_dif = " + $Bz_dif
+    FILEWRITE $align_save "$Bx = " + $Bx
+    FILEWRITE $align_save "$By = " + $By
 ENDIF
 IF $nozzle = 3
     $align_save = FILEOPEN "C:\Users\Lewis Group\Desktop\Alignment\alignment_values_3.txt", 0
@@ -729,6 +733,8 @@ IF $nozzle = 3
     FILEWRITE $align_save "$Cy_dif = " + $Cy_dif
     FILEWRITE $align_save "$zMeasureC = " + $zMeasureC
     FILEWRITE $align_save "$Cz_dif = " + $Cz_dif
+    FILEWRITE $align_save "$Cx = " + $Cx
+    FILEWRITE $align_save "$Cy = " + $Cy
 ENDIF
 IF $nozzle = 4
     $align_save = FILEOPEN "C:\Users\Lewis Group\Desktop\Alignment\alignment_values_4.txt", 0
@@ -736,6 +742,8 @@ IF $nozzle = 4
     FILEWRITE $align_save "$Dy_dif = " + $Dy_dif
     FILEWRITE $align_save "$zMeasureD = " + $zMeasureD
     FILEWRITE $align_save "$Dz_dif = " + $Dz_dif
+    FILEWRITE $align_save "$Dx = " + $Dx
+    FILEWRITE $align_save "$Dy = " + $Dy
 ENDIF
 
 
