@@ -90,7 +90,9 @@ class G(object):
 
         self.current_position = defaultdict(float)
         self.movement_mode = 'relative'
+
         self.position_history = []
+        self.speed_history = []
 
         self.setup()
 
@@ -144,6 +146,7 @@ class G(object):
 
         """
         self.write('F{}'.format(rate))
+        self.speed = rate
 
     def dwell(self, time):
         """ Pause code executions for the given amount of time.
@@ -638,3 +641,7 @@ class G(object):
         y = self.current_position['y']
         z = self.current_position['z']
         self.position_history.append((x, y, z))
+
+        len_history = len(self.position_history)
+        if len(self.speed_history) == 0 or self.speed_history[-1][1] != self.speed:
+            self.speed_history.append((len_history - 1, self.speed))
