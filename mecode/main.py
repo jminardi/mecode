@@ -56,7 +56,8 @@ class G(object):
 
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
                  aerotech_include=True, cal_data=None, cal_axis='A',
-                 direct_write=False, aero_host='localhost', aero_port=8000,):
+                 direct_write=False, printer_host='localhost',
+                 printer_port=8000, two_way_comm=True):
         """
         Parameters
         ----------
@@ -79,7 +80,17 @@ class G(object):
             given x, y.
         cal_axis : str (default: 'A')
             The axis that the calibration deltas should apply to.
-        direct_write
+        direct_write : bool (default: False)
+            If True a socket is opened to the printer and the GCode is sent
+            directly over.
+        printer_host : str (default: 'localhost')
+            Hostname of the printer, only used if `direct_write` is True.
+        printer_port : int (default: 8000)
+            Port of the printer, only used if `direct_write` is True.
+        two_way_comm : bool (default: True)
+            If True, mecode waits for a response after every line of GCode is
+            sent over the socket. The response is returned by the `write`
+            method. Only applies if `direct_write` is True.
 
         """
         self.outfile = outfile
@@ -94,11 +105,13 @@ class G(object):
         self.movement_mode = 'relative'
 
         self.position_history = []
+        self.speed = 0
         self.speed_history = []
 
         self.direct_write = direct_write
-        self.aero_host = aero_host
-        self.aero_port = aero_port
+        self.printer_host = printer_host
+        self.printer_port = printer_port
+        self.two_way_comm = two_way_comm
         self._socket = None
 
         self.setup()
@@ -520,6 +533,11 @@ class G(object):
 
     ### AeroTech Specific Functions  ##########################################
 
+    def get_axis_pos(self, axis):
+        cmd = 'AXISSTATUS({}, DATAITEM_PositionFeedback)'.format(axis)
+        pos = self.write(cmd)
+        return pos
+
     def toggle_pressure(self, com_port):
         self.write('Call togglePress P{}'.format(com_port))
 
@@ -579,7 +597,7 @@ class G(object):
             nozzle= 4
         self.write('Call save_value Q{}'.format(nozzle))
 
-    ### Private Interface  ####################################################
+    ### Public Interface  #####################################################
 
     def interpolate(self, x, y):
         from scipy.interpolate import griddata
@@ -619,12 +637,15 @@ class G(object):
         if self.direct_write is True:
             if self._socket is None:
                 import socket
-                self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self._socket.connect((self.aero_host, self.aero_port))
+                self._socket = socket.socket(socket.AF_INET,
+                                             socket.SOCK_STREAM)
+                self._socket.connect((self.printer_host, self.printer_port))
             self._socket.send(statement + '\n')
-            response = self._socket.recv(8192)
-            return response
+            if self.two_way_comm is True:
+                response = self._socket.recv(8192)
+                return response
 
+    ### Private Interface  ####################################################
 
     def _format_args(self, x, y, kwargs):
         args = []
