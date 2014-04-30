@@ -534,9 +534,22 @@ class G(object):
     ### AeroTech Specific Functions  ##########################################
 
     def get_axis_pos(self, axis):
-        cmd = 'AXISSTATUS({}, DATAITEM_PositionFeedback)'.format(axis)
+        """ Gets the current position of the specified `axis`.
+        """
+        cmd = 'AXISSTATUS({}, DATAITEM_PositionFeedback)'.format(axis.upper())
         pos = self.write(cmd)
-        return pos
+        return float(pos)
+        
+    def set_cal_file(self, path):
+        """ Dynamically applies the specified calibration file at runtime.
+        
+        Parameters
+        ----------
+        path : str
+            The path specifying the aerotech calibration file.
+        
+        """
+        self.write(r'LOADCALFILE "{}", 2D_CAL'.format(path))
 
     def toggle_pressure(self, com_port):
         self.write('Call togglePress P{}'.format(com_port))
@@ -643,7 +656,9 @@ class G(object):
             self._socket.send(statement + '\n')
             if self.two_way_comm is True:
                 response = self._socket.recv(8192)
-                return response
+                if response[0] != '%':
+                    raise RuntimeError(response)
+                return response[1:-1]
 
     ### Private Interface  ####################################################
 
