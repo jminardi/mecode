@@ -8,7 +8,8 @@ class KeyenceMicrometer(BaseSerialDevice):
         return self.send('U1')
 
     def stop_z_min(self):
-        return self.send('L1,0')[3:]
+        val = self.send('L1,0')[4:]
+        return float(val)
 
     def set_program(self, number):
         return self.send('PW,{}'.format(number))
