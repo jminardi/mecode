@@ -538,6 +538,128 @@ class G(object):
         if tail is False:
             self.move(**{major_name: (sign * major)})
 
+    def triangular_meander(self, x, y, spacing, extrusion_width, start='LL', orientation='x'):
+        """ Infill a rectangle with a square wave meandering pattern. If the
+        relevant dimension is not a multiple of the spacing, the spacing will
+        be tweaked to ensure the dimensions work out.
+
+        Parameters
+        ----------
+        x : float
+            The width of the rectangle in the x dimension.
+        y : float
+            The heigh of the rectangle in the y dimension.
+        spacing : float
+            The space between parallel meander lines.
+        start : str (either 'LL', 'UL', 'LR', 'UR') (default: 'LL')
+            The start of the meander -  L/U = lower/upper, L/R = left/right
+            This assumes an origin in the lower left.
+        orientation : str ('x' or 'y') (default: 'x')
+
+        Examples
+        --------
+        >>> # meander through a 10x10 sqaure with a spacing of 1mm starting in
+        >>> # the lower left.
+        >>> g.meander(10, 10, 1)
+
+        >>> # 3x5 meander with a spacing of 1 and with parallel lines through y
+        >>> g.meander(3, 5, spacing=1, orientation='y')
+
+        >>> # 10x5 meander with a spacing of 2 starting in the upper right.
+        >>> g.meander(10, 5, 2, start='UR')
+
+        """
+
+        import numpy as np
+
+        if start.upper() == 'UL':
+            x, y = x, -y
+        elif start.upper() == 'UR':
+            x, y = -x, -y
+        elif start.upper() == 'LR':
+            x, y = -x, y
+
+        # Major axis is the parallel lines, minor axis is the jog.
+        if orientation == 'x':
+            major, major_name = x, 'x'
+            minor, minor_name = y, 'y'
+        else:
+            major, major_name = y, 'y'
+            minor, minor_name = x, 'x'
+
+        if minor > 0:
+            passes = math.ceil(minor / spacing)
+        else:
+            passes = abs(math.floor(minor / spacing))
+        actual_spacing = minor / passes
+
+        # calculate number of equilateral triangles, then adjust major axis
+        tri_height = actual_spacing - extrusion_width*2
+        tri_base = tri_height*2/math.sqrt(3)
+        tri_ct_unadj = (major - extrusion_width*3)/tri_base
+        tri_ct_adj = math.ceil(tri_ct_unadj) - 0.5 # end up on the next column
+        major_adj = (tri_ct_adj * tri_base) + extrusion_width*3
+        #print(tri_ct_unadj)
+        #print(tri_ct_adj)
+
+        if abs(actual_spacing) != spacing:
+            msg = ';WARNING! meander spacing updated from {} to {}'
+            self.write(msg.format(spacing, actual_spacing))
+        if tri_ct_unadj != tri_ct_adj:
+            msg = ';WARNING! major axis, {}, updated from {} to {}'
+            self.write(msg.format(major_name, major, major_adj))
+        major = major_adj
+        spacing = actual_spacing
+        scan_dir = 1
+        zigzag_dir = 1
+
+        self.relative()
+        # do meander
+        for _ in range(int(passes)):
+            self.move(**{major_name: (scan_dir * major)})
+            self.move(**{minor_name: spacing})
+            scan_dir = -1 * scan_dir
+        self.move(**{major_name: (scan_dir * major)})
+
+        # find zigzag directions
+        if (minor > 0
+           and ((major < 0 and passes % 2 != 0) or (major > 0 and passes % 2 == 0))):
+            print(";case1")
+            scan_dir = -1
+            zigzag_dir = -1
+        elif (minor > 0
+            and ((major > 0 and passes % 2 != 0) or (major < 0 and passes % 2 == 0))):
+            print(";case2")
+            scan_dir = 1
+            zigzag_dir = -1
+        elif (minor < 0
+            and ((major < 0 and passes % 2 != 0) or (major > 0 and passes % 2 == 0))):
+            print(";case3")
+            scan_dir = -1
+            zigzag_dir = 1
+        elif (minor < 0
+            and ((major > 0 and passes % 2 != 0) or (major < 0 and passes % 2 == 0))):
+            print(";case4")
+            scan_dir = 1
+            zigzag_dir = 1
+
+        #print(minor)
+        #print(major)
+        #print(scan_dir)
+        #print(zigzag_dir)
+        # Move in extrusion width
+        self.move(**{major_name: (scan_dir * extrusion_width),
+                     minor_name: (zigzag_dir * extrusion_width)})
+        # do zigzag infill
+        for _ in range(int(passes)):
+            for _ in np.arange(0,tri_ct_adj,0.5):
+                self.move(**{major_name: (scan_dir * tri_base/2),
+                             minor_name: (zigzag_dir * tri_height)})
+                zigzag_dir = -1 * zigzag_dir
+            scan_dir = -1 * scan_dir
+            zigzag_dir = -1 * zigzag_dir
+            self.move(**{minor_name: (zigzag_dir * extrusion_width*2)})
+
     def clip(self, axis='z', direction='+x', height=4):
         """ Move the given axis up to the given height while arcing in the
         given direction.
