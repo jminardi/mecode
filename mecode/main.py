@@ -596,9 +596,9 @@ class G(object):
         # calculate number of equilateral triangles, then adjust major axis
         tri_height = actual_spacing - extrusion_width*2
         tri_base = tri_height*2/math.sqrt(3)
-        tri_ct_unadj = (major - extrusion_width*3)/tri_base
+        tri_ct_unadj = (major - extrusion_width*2)/tri_base
         tri_ct_adj = math.ceil(tri_ct_unadj) - 0.5 # end up on the next column
-        major_adj = (tri_ct_adj * tri_base) + extrusion_width*3
+        major_adj = (tri_ct_adj * tri_base) + extrusion_width*2
         #print(tri_ct_unadj)
         #print(tri_ct_adj)
 
