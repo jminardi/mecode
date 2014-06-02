@@ -487,6 +487,12 @@ class G(object):
             The heigh of the rectangle in the y dimension.
         spacing : float
             The space between parallel meander lines.
+        extrusion_width : float
+            The extrusion width used to inset the triangular meanderings.
+        print_feed : float
+            The feedrate for printing moves.
+        travel_feed : float
+            The feedrate for travel moves.
         start : str (either 'LL', 'UL', 'LR', 'UR') (default: 'LL')
             The start of the meander -  L/U = lower/upper, L/R = left/right
             This assumes an origin in the lower left.
@@ -538,10 +544,12 @@ class G(object):
         if tail is False:
             self.move(**{major_name: (sign * major)})
 
-    def triangular_meander(self, x, y, spacing, extrusion_width, start='LL', orientation='x'):
-        """ Infill a rectangle with a square wave meandering pattern. If the
-        relevant dimension is not a multiple of the spacing, the spacing will
-        be tweaked to ensure the dimensions work out.
+    def triangular_meander(self, x, y, spacing, extrusion_width=0.0,
+                           print_feed=10.0, travel_feed=100, start='LL',
+                           orientation='x'):
+        """ Infill a rectangle with a square wave meandering pattern and
+        triangular meander. If the relevant dimension is not a multiple of the
+        spacing, the spacing will be tweaked to ensure the dimensions work out.
 
         Parameters
         ----------
@@ -560,13 +568,13 @@ class G(object):
         --------
         >>> # meander through a 10x10 sqaure with a spacing of 1mm starting in
         >>> # the lower left.
-        >>> g.meander(10, 10, 1)
+        >>> g.triangular_meander(10, 10, 1)
 
         >>> # 3x5 meander with a spacing of 1 and with parallel lines through y
-        >>> g.meander(3, 5, spacing=1, orientation='y')
+        >>> g.triangular_meander(3, 5, spacing=1, orientation='y')
 
         >>> # 10x5 meander with a spacing of 2 starting in the upper right.
-        >>> g.meander(10, 5, 2, start='UR')
+        >>> g.triangular_meander(10, 5, 2, start='UR')
 
         """
 
