@@ -490,9 +490,9 @@ class G(object):
         extrusion_width : float
             The extrusion width used to inset the triangular meanderings.
         print_feed : float
-            The feedrate for printing moves.
+            The feedrate for printing moves in mm/s.
         travel_feed : float
-            The feedrate for travel moves.
+            The feedrate for travel moves in mm/s.
         start : str (either 'LL', 'UL', 'LR', 'UR') (default: 'LL')
             The start of the meander -  L/U = lower/upper, L/R = left/right
             This assumes an origin in the lower left.
@@ -545,7 +545,7 @@ class G(object):
             self.move(**{major_name: (sign * major)})
 
     def triangular_meander(self, x, y, spacing, extrusion_width=0.0,
-                           print_feed=10.0, travel_feed=100, start='LL',
+                           print_feed=0.0, travel_feed=0.0, start='LL',
                            orientation='x'):
         """ Infill a rectangle with a square wave meandering pattern and
         triangular meander. If the relevant dimension is not a multiple of the
@@ -607,8 +607,7 @@ class G(object):
         tri_ct_unadj = (major - extrusion_width*2)/tri_base
         tri_ct_adj = math.ceil(tri_ct_unadj) - 0.5 # end up on the next column
         major_adj = (tri_ct_adj * tri_base) + extrusion_width*2
-        #print(tri_ct_unadj)
-        #print(tri_ct_adj)
+        tri_ct_adj = abs(tri_ct_adj)
 
         if abs(actual_spacing) != spacing:
             msg = ';WARNING! meander spacing updated from {} to {}'
@@ -622,6 +621,9 @@ class G(object):
         zigzag_dir = 1
 
         self.relative()
+        if print_feed > 0.0:
+            self.feed(print_feed)
+
         # do meander
         for _ in range(int(passes)):
             self.move(**{major_name: (scan_dir * major)})
@@ -643,21 +645,23 @@ class G(object):
         elif (minor < 0
             and ((major < 0 and passes % 2 != 0) or (major > 0 and passes % 2 == 0))):
             print(";case3")
-            scan_dir = -1
-            zigzag_dir = 1
+            scan_dir = 1
+            zigzag_dir = -1
         elif (minor < 0
             and ((major > 0 and passes % 2 != 0) or (major < 0 and passes % 2 == 0))):
             print(";case4")
-            scan_dir = 1
-            zigzag_dir = 1
+            scan_dir = -1
+            zigzag_dir = -1
 
-        #print(minor)
-        #print(major)
-        #print(scan_dir)
-        #print(zigzag_dir)
         # Move in extrusion width
-        self.move(**{major_name: (scan_dir * extrusion_width),
-                     minor_name: (zigzag_dir * extrusion_width)})
+        if extrusion_width > 0:
+            if travel_feed > 0.0:
+                self.feed(travel_feed)
+            self.move(**{major_name: (scan_dir * extrusion_width),
+                         minor_name: (zigzag_dir * extrusion_width)})
+            if print_feed > 0.0:
+                self.feed(print_feed)
+
         # do zigzag infill
         for _ in range(int(passes)):
             for _ in np.arange(0,tri_ct_adj,0.5):
@@ -666,7 +670,11 @@ class G(object):
                 zigzag_dir = -1 * zigzag_dir
             scan_dir = -1 * scan_dir
             zigzag_dir = -1 * zigzag_dir
+            if travel_feed > 0.0:
+                self.feed(travel_feed)
             self.move(**{minor_name: (zigzag_dir * extrusion_width*2)})
+            if print_feed > 0.0:
+                self.feed(print_feed)
 
     def clip(self, axis='z', direction='+x', height=4):
         """ Move the given axis up to the given height while arcing in the
