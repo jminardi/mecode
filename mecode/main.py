@@ -496,7 +496,6 @@ class G(object):
         start : str (either 'LL', 'UL', 'LR', 'UR') (default: 'LL')
             The start of the meander -  L/U = lower/upper, L/R = left/right
             This assumes an origin in the lower left.
-        orientation : str ('x' or 'y') (default: 'x')
 
         Examples
         --------
@@ -519,12 +518,12 @@ class G(object):
             x, y = -x, y
 
         # Major axis is the parallel lines, minor axis is the jog.
-        if orientation == 'x':
-            major, major_name = x, 'x'
-            minor, minor_name = y, 'y'
-        else:
-            major, major_name = y, 'y'
-            minor, minor_name = x, 'x'
+        #if orientation == 'x':
+        major, major_name = x, 'x'
+        minor, minor_name = y, 'y'
+        #else:
+        #    major, major_name = y, 'y'
+        #    minor, minor_name = x, 'x'
 
         if minor > 0:
             passes = math.ceil(minor / spacing)
@@ -545,8 +544,7 @@ class G(object):
             self.move(**{major_name: (sign * major)})
 
     def triangular_meander(self, x, y, spacing, extrusion_width=0.0,
-                           print_feed=0.0, travel_feed=0.0, start='LL',
-                           orientation='x'):
+                           print_feed=0.0, travel_feed=0.0, start='LL'):
         """ Infill a rectangle with a square wave meandering pattern and
         triangular meander. If the relevant dimension is not a multiple of the
         spacing, the spacing will be tweaked to ensure the dimensions work out.
@@ -571,7 +569,7 @@ class G(object):
         >>> g.triangular_meander(10, 10, 1)
 
         >>> # 3x5 meander with a spacing of 1 and with parallel lines through y
-        >>> g.triangular_meander(3, 5, spacing=1, orientation='y')
+        >>> g.triangular_meander(3, 5, spacing=1)
 
         >>> # 10x5 meander with a spacing of 2 starting in the upper right.
         >>> g.triangular_meander(10, 5, 2, start='UR')
@@ -602,9 +600,9 @@ class G(object):
         actual_spacing = minor / passes
 
         # calculate number of equilateral triangles, then adjust major axis
-        tri_height = actual_spacing - extrusion_width*2
+        tri_height = abs(actual_spacing) - extrusion_width*2
         tri_base = tri_height*2/math.sqrt(3)
-        tri_ct_unadj = (major - extrusion_width*2)/tri_base
+        tri_ct_unadj = (abs(major) - np.sign(major)*extrusion_width*2)/tri_base
         tri_ct_adj = math.ceil(tri_ct_unadj) - 0.5 # end up on the next column
         major_adj = (tri_ct_adj * tri_base) + extrusion_width*2
         tri_ct_adj = abs(tri_ct_adj)
@@ -645,13 +643,13 @@ class G(object):
         elif (minor < 0
             and ((major < 0 and passes % 2 != 0) or (major > 0 and passes % 2 == 0))):
             print(";case3")
-            scan_dir = 1
-            zigzag_dir = -1
+            scan_dir = -1
+            zigzag_dir = 1
         elif (minor < 0
             and ((major > 0 and passes % 2 != 0) or (major < 0 and passes % 2 == 0))):
             print(";case4")
-            scan_dir = -1
-            zigzag_dir = -1
+            scan_dir = 1
+            zigzag_dir = 1
 
         # Move in extrusion width
         if extrusion_width > 0:
