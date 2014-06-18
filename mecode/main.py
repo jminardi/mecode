@@ -637,10 +637,15 @@ class G(object):
         plt.show()
 
     def view(self):
-        from mayavi import mlab
+        import matplotlib as mpl
+        from mpl_toolkits.mplot3d import Axes3D
+        import matplotlib.pyplot as plt
         import numpy as np
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
         history = np.array(self.position_history)
-        mlab.plot3d(history[:, 0], history[:, 1], history[:, 2])
+        ax.plot(history[:, 0], history[:, 1], history[:, 2])
+        plt.show()
 
     def write(self, statement):
         if self.print_lines:
