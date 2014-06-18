@@ -636,16 +636,33 @@ class G(object):
             ax.scatter(xxr, yyr, zz, color='red')
         plt.show()
 
-    def view(self):
-        import matplotlib as mpl
-        from mpl_toolkits.mplot3d import Axes3D
-        import matplotlib.pyplot as plt
+    def view(self, backend='matplotlib'):
+        """ View the generated Gcode.
+        
+        Parameters
+        ----------
+        backend : str (default: 'matplotlib')
+            The plotting backend to use, one of 'matplotlib' or 'mayavi'.
+        
+        """
         import numpy as np
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
         history = np.array(self.position_history)
-        ax.plot(history[:, 0], history[:, 1], history[:, 2])
-        plt.show()
+
+        if backend == 'matplotlib':
+            import matplotlib as mpl
+            from mpl_toolkits.mplot3d import Axes3D
+            import matplotlib.pyplot as plt
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            ax.plot(history[:, 0], history[:, 1], history[:, 2])
+            plt.show()
+        elif backend == 'mayavi':
+            from mayavi import mlab
+            mlab.plot3d(history[:, 0], history[:, 1], history[:, 2])
+        else:
+            raise Exception("Invalid plotting backend! Choose one of mayavi or matplotlib.")
+
+
 
     def write(self, statement):
         if self.print_lines:
