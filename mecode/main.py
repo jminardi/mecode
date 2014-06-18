@@ -297,7 +297,7 @@ class G(object):
         Examples
         --------
         >>> # arc 10 mm up in y and 10 mm over in x with a radius of 20.
-        >>> g.arc(x-10, y=10, radius=20)
+        >>> g.arc(x=10, y=10, radius=20)
 
         >>> # move 10 mm up on the A axis, arcing through y with a radius of 20
         >>> g.arc(A=10, y=0, radius=20)
