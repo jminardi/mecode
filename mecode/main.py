@@ -372,7 +372,7 @@ class G(object):
         x : float
             The width of the rectangle in the x dimension.
         y : float
-            The heigh of the rectangle in the y dimension.
+            The height of the rectangle in the y dimension.
         direction : str (either 'CW' or 'CCW') (default: 'CW')
             Which direction to complete the rectangle in.
         start : str (either 'LL', 'UL', 'LR', 'UR') (default: 'LL')
