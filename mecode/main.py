@@ -116,7 +116,7 @@ class G(object):
             # assume arg outfile is passed in a file descriptor
             self.out_fd = outfile
         else:
-            self.out_fd = None  
+            self.out_fd = None
 
         self.print_lines = print_lines
         self.header = header
@@ -145,7 +145,7 @@ class G(object):
         Context manager entry
         Can use like:
 
-        with mecode.G(  outfile=self.outfile, 
+        with mecode.G(  outfile=self.outfile,
                         print_lines=False,
                         aerotech_include=False) as g:
             <code block>
@@ -256,7 +256,7 @@ class G(object):
                 lines = [encode2To3(x) for x in lines]
                 self.out_fd.writelines(lines)
             if self.footer is not None:
-                with open(self.footer) as fd: 
+                with open(self.footer) as fd:
                     lines = fd.readlines()
                     lines = [encode2To3(x) for x in lines]
                     self.out_fd.writelines(lines)
@@ -574,8 +574,8 @@ class G(object):
             orientation = 'CCW' if direction[0] == '-' else 'CW'
         radius = abs(height / 2.0)
         kwargs = {
-            'secondary_axis': 0,
-            'axis': height,
+            secondary_axis: 0,
+            axis: height,
             'direction': orientation,
             'radius': radius,
         }
@@ -589,15 +589,15 @@ class G(object):
         cmd = 'AXISSTATUS({}, DATAITEM_PositionFeedback)'.format(axis.upper())
         pos = self.write(cmd)
         return float(pos)
-        
+
     def set_cal_file(self, path):
         """ Dynamically applies the specified calibration file at runtime.
-        
+
         Parameters
         ----------
         path : str
             The path specifying the aerotech calibration file.
-        
+
         """
         self.write(r'LOADCALFILE "{}", 2D_CAL'.format(path))
 
@@ -688,12 +688,12 @@ class G(object):
 
     def view(self, backend='mayavi'):
         """ View the generated Gcode.
-        
+
         Parameters
         ----------
         backend : str (default: 'matplotlib')
             The plotting backend to use, one of 'matplotlib' or 'mayavi'.
-        
+
         """
         import numpy as np
         history = np.array(self.position_history)
