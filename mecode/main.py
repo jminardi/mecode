@@ -49,6 +49,8 @@ import math
 import os
 from collections import defaultdict
 
+import numpy as np
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -104,7 +106,7 @@ class G(object):
         self.current_position = defaultdict(float)
         self.movement_mode = 'relative'
 
-        self.position_history = []
+        self.position_history = [(0, 0, 0)]
         self.speed = 0
         self.speed_history = []
 
@@ -355,7 +357,7 @@ class G(object):
                                                   helix_dim.upper(), helix_len))
             kwargs[helix_dim] = helix_len
 
-        self._update_current_position(**kwargs)
+        self._update_current_position(radius=radius, **kwargs)
 
     def abs_arc(self, direction='CW', radius='auto', **kwargs):
         """ Same as `arc` method, but positions are interpreted as absolute.
@@ -539,15 +541,15 @@ class G(object):
         cmd = 'AXISSTATUS({}, DATAITEM_PositionFeedback)'.format(axis.upper())
         pos = self.write(cmd)
         return float(pos)
-        
+
     def set_cal_file(self, path):
         """ Dynamically applies the specified calibration file at runtime.
-        
+
         Parameters
         ----------
         path : str
             The path specifying the aerotech calibration file.
-        
+
         """
         self.write(r'LOADCALFILE "{}", 2D_CAL'.format(path))
 
@@ -622,7 +624,6 @@ class G(object):
     def show_interpolation_surface(self, interpolate=True):
         from mpl_toolkits.mplot3d import Axes3D  #noqa
         import matplotlib.pyplot as plt
-        import numpy as np
         ax = plt.figure().gca(projection='3d')
         d = self.cal_data
         ax.scatter(d[:, 0], d[:, 1], d[:, 2])
@@ -638,7 +639,6 @@ class G(object):
 
     def view(self):
         from mayavi import mlab
-        import numpy as np
         history = np.array(self.position_history)
         mlab.plot3d(history[:, 0], history[:, 1], history[:, 2])
 
@@ -672,7 +672,8 @@ class G(object):
         args = ' '.join(args)
         return args
 
-    def _update_current_position(self, mode='auto', x=None, y=None, **kwargs):
+    def _update_current_position(self, mode='auto', x=None, y=None,
+                                 radius=None, **kwargs):
         if mode == 'auto':
             mode = self.movement_mode
 
@@ -694,8 +695,36 @@ class G(object):
         x = self.current_position['x']
         y = self.current_position['y']
         z = self.current_position['z']
-        self.position_history.append((x, y, z))
 
+        if radius is None:
+            self.position_history.append((x, y, z))
+        else:
+            start = np.array(self.position_history[-1][:2])
+            self._record_circle(start=start, end=np.array((x, y)), radius=radius)
         len_history = len(self.position_history)
         if len(self.speed_history) == 0 or self.speed_history[-1][1] != self.speed:
             self.speed_history.append((len_history - 1, self.speed))
+
+    def _record_circle(self, start, end, radius):
+        import numpy as np
+        step = np.pi/8.0
+        rot_mat = np.array([[np.cos(step), -np.sin(step)],
+                            [np.sin(step), np.cos(step)]])
+        middle = get_center_point(start[0], start[1], end[0], end[1], radius)
+        delta = np.array(start) - np.array(middle)
+        prev_dist = 1e9
+        cur_dist = 1e8
+        while prev_dist > cur_dist:
+            prev_dist = cur_dist
+            cur_pt = delta.dot(rot_mat) + middle
+            cur_dist = np.linalg.norm(cur_pt - end)
+            self.position_history.append(np.concatenate([cur_pt, [0]]))
+
+
+def get_center_point(x0, y0, x1, y1, r):
+    d = math.sqrt((x0-x1)**2 + (y0-y1)**2)
+    if d == 0:
+        return x0, x1
+    x = ((x0 + x1)/2.0) + (((y0 - y1)/2.0) * math.sqrt(((2 * r)/d)**2 - 1))
+    y = ((y0 + y1)/2.0) - (((x0 - x1)/2.0) * math.sqrt(((2 * r)/d)**2 - 1))
+    return x, y
