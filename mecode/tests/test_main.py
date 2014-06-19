@@ -1,16 +1,22 @@
-import os
+import os.path
 import unittest
 from tempfile import TemporaryFile
+import sys
+from os.path import abspath, dirname
 
-from mecode import G
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = dirname(abspath(__file__))
 
+try:
+    from mecode import G, is_str, decode2To3
+except:
+    sys.path.append(abspath(os.path.join(HERE, '..','..')))
+    from mecode import G, is_str, decode2To3
 
 class TestG(unittest.TestCase):
 
     def setUp(self):
-        self.outfile = TemporaryFile()
+        self.outfile= TemporaryFile()
         self.g = G(outfile=self.outfile, print_lines=False,
                    aerotech_include=False)
 
@@ -402,12 +408,12 @@ class TestG(unittest.TestCase):
     ### helper functions  #####################################################
 
     def assert_output(self, expected):
-        if isinstance(expected, basestring):
+        if is_str(expected):
             expected = expected.split('\n')
         expected = [x.strip() for x in expected if x.strip()]
         self.outfile.seek(0)
         lines = self.outfile.readlines()
-        lines = [x.strip() for x in lines if x.strip()]
+        lines = [decode2To3(x).strip() for x in lines if x.strip()]
         self.assertListEqual(lines, expected)
 
     def assert_position(self, expected):
