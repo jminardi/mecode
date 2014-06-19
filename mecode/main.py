@@ -51,6 +51,22 @@ from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
+# for python 2/3 compatibility
+try:
+    isinstance("", basestring)
+    def is_str(s):
+        return isinstance(s, basestring)
+    def encode2To3(s):
+        return s
+    def decode2To3(s):
+        return s
+except NameError:
+    def is_str(s):
+        return isinstance(s, str)
+    def encode2To3(s):
+        return bytes(s, 'UTF-8')
+    def decode2To3(s):
+        return s.decode('UTF-8')
 
 class G(object):
 
@@ -93,7 +109,15 @@ class G(object):
             method. Only applies if `direct_write` is True.
 
         """
-        self.outfile = outfile
+        # string file name
+        self.outfile = outfile if is_str(outfile) else None
+        # file descriptor
+        if not is_str(outfile) and outfile is not None:
+            # assume arg outfile is passed in a file descriptor
+            self.out_fd = outfile
+        else:
+            self.out_fd = None  
+
         self.print_lines = print_lines
         self.header = header
         self.footer = footer
@@ -115,6 +139,25 @@ class G(object):
         self._socket = None
 
         self.setup()
+
+    def __enter__(self):
+        """
+        Context manager entry
+        Can use like:
+
+        with mecode.G(  outfile=self.outfile, 
+                        print_lines=False,
+                        aerotech_include=False) as g:
+            <code block>
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Context manager exit
+        """
+        self.teardown()
+
 
     ### GCode Aliases  ########################################################
 
@@ -187,31 +230,38 @@ class G(object):
 
         """
         outfile = self.outfile
-        if outfile is not None and self.aerotech_include is True:
-            if isinstance(outfile, basestring):
-                outfile = open(outfile, 'w+')  # open it if it is a path
-            self.outfile = outfile
-            lines = open(os.path.join(HERE, 'header.txt')).readlines()
-            outfile.writelines(lines)
-            outfile.write('\n')
+        if self.aerotech_include is True:
+            if outfile is not None:
+                self.out_fd = open(outfile, 'w+')  # open it if it is a path
+            with open(os.path.join(HERE, 'header.txt')) as fd:
+                lines = fd.readlines()
+                lines = [encode2To3(x) for x in lines]
+                self.out_fd.writelines(lines)
+                self.out_fd.write(encode2To3('\n'))
             if self.header is not None:
-                lines = open(self.header).readlines()
-                outfile.writelines(lines)
-                outfile.write('\n')
+                with open(self.header) as fd:
+                    lines = fd.readlines()
+                    lines = [encode2To3(x) for x in lines]
+                    self.out_fd.writelines(lines)
+                    self.out_fd.write(encode2To3('\n'))
 
     def teardown(self):
         """ Close the outfile file after writing the footer if opened. This
         method must be called once after all commands.
 
         """
-        if self.outfile is not None and self.aerotech_include is True:
-            lines = open(os.path.join(HERE, 'footer.txt')).readlines()
-            self.outfile.writelines(lines)
-            self.outfile.close()
+        if self.out_fd is not None and self.aerotech_include is True:
+            with open(os.path.join(HERE, 'footer.txt')) as fd:
+                lines = fd.readlines()
+                lines = [encode2To3(x) for x in lines]
+                self.out_fd.writelines(lines)
             if self.footer is not None:
-                lines = open(self.footer).readlines()
-                self.outfile.writelines(lines)
-                self.outfile.write('\n')
+                with open(self.footer) as fd: 
+                    lines = fd.readlines()
+                    lines = [encode2To3(x) for x in lines]
+                    self.out_fd.writelines(lines)
+                    self.out_fd.write(encode2To3('\n'))
+            self.out_fd.close()
         if self._socket is not None:
             self._socket.close()
 
@@ -329,11 +379,11 @@ class G(object):
         elif direction == 'CCW':
             command = 'G3'
 
-        values = kwargs.values()
+        values = [v for v in kwargs.values()]
         if self.movement_mode == 'relative':
             dist = math.sqrt(values[0] ** 2 + values[1] ** 2)
         else:
-            k = kwargs.keys()
+            k = [ky for ky in kwargs.keys()]
             cp = self.current_position
             dist = math.sqrt(
                 (cp[k[0]] - values[0]) ** 2 + (cp[k[1]] - values[1]) ** 2
@@ -524,8 +574,8 @@ class G(object):
             orientation = 'CCW' if direction[0] == '-' else 'CW'
         radius = abs(height / 2.0)
         kwargs = {
-            secondary_axis: 0,
-            axis: height,
+            'secondary_axis': 0,
+            'axis': height,
             'direction': orientation,
             'radius': radius,
         }
@@ -663,20 +713,22 @@ class G(object):
 
 
 
-    def write(self, statement):
+    def write(self, statement_in):
         if self.print_lines:
-            print statement
-        if self.outfile is not None:
-            self.outfile.write(statement + '\n')
+            print(statement_in)
+        statement = encode2To3(statement_in + '\n')
+        if self.out_fd is not None:
+            self.out_fd.write(statement)
         if self.direct_write is True:
             if self._socket is None:
                 import socket
                 self._socket = socket.socket(socket.AF_INET,
                                              socket.SOCK_STREAM)
                 self._socket.connect((self.printer_host, self.printer_port))
-            self._socket.send(statement + '\n')
+            self._socket.send(statement)
             if self.two_way_comm is True:
                 response = self._socket.recv(8192)
+                response = decode2To3(response)
                 if response[0] != '%':
                     raise RuntimeError(response)
                 return response[1:-1]
@@ -702,14 +754,14 @@ class G(object):
                 self.current_position['x'] += x
             if y is not None:
                 self.current_position['y'] += y
-            for dimention, delta in kwargs.iteritems():
+            for dimention, delta in kwargs.items():
                 self.current_position[dimention] += delta
         else:
             if x is not None:
                 self.current_position['x'] = x
             if y is not None:
                 self.current_position['y'] = y
-            for dimention, delta in kwargs.iteritems():
+            for dimention, delta in kwargs.items():
                 self.current_position[dimention] = delta
 
         x = self.current_position['x']
