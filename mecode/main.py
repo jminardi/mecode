@@ -636,7 +636,7 @@ class G(object):
             ax.scatter(xxr, yyr, zz, color='red')
         plt.show()
 
-    def view(self, backend='matplotlib'):
+    def view(self, backend='mayavi'):
         """ View the generated Gcode.
         
         Parameters
@@ -649,7 +649,6 @@ class G(object):
         history = np.array(self.position_history)
 
         if backend == 'matplotlib':
-            import matplotlib as mpl
             from mpl_toolkits.mplot3d import Axes3D
             import matplotlib.pyplot as plt
             fig = plt.figure()
