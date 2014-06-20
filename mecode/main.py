@@ -230,20 +230,20 @@ class G(object):
 
         """
         outfile = self.outfile
+        if outfile is not None:
+            self.out_fd = open(outfile, 'w+')  # open it if it is a path
         if self.aerotech_include is True:
-            if outfile is not None:
-                self.out_fd = open(outfile, 'w+')  # open it if it is a path
             with open(os.path.join(HERE, 'header.txt')) as fd:
                 lines = fd.readlines()
                 lines = [encode2To3(x) for x in lines]
                 self.out_fd.writelines(lines)
                 self.out_fd.write(encode2To3('\n'))
-            if self.header is not None:
-                with open(self.header) as fd:
-                    lines = fd.readlines()
-                    lines = [encode2To3(x) for x in lines]
-                    self.out_fd.writelines(lines)
-                    self.out_fd.write(encode2To3('\n'))
+        if self.header is not None:
+            with open(self.header) as fd:
+                lines = fd.readlines()
+                lines = [encode2To3(x) for x in lines]
+                self.out_fd.writelines(lines)
+                self.out_fd.write(encode2To3('\n'))
 
     def teardown(self):
         """ Close the outfile file after writing the footer if opened. This
