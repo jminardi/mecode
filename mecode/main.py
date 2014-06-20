@@ -250,11 +250,12 @@ class G(object):
         method must be called once after all commands.
 
         """
-        if self.out_fd is not None and self.aerotech_include is True:
-            with open(os.path.join(HERE, 'footer.txt')) as fd:
-                lines = fd.readlines()
-                lines = [encode2To3(x) for x in lines]
-                self.out_fd.writelines(lines)
+        if self.out_fd is not None:
+            if self.aerotech_include is True:
+                with open(os.path.join(HERE, 'footer.txt')) as fd:
+                    lines = fd.readlines()
+                    lines = [encode2To3(x) for x in lines]
+                    self.out_fd.writelines(lines)
             if self.footer is not None:
                 with open(self.footer) as fd:
                     lines = fd.readlines()
