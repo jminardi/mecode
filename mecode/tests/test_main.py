@@ -441,7 +441,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd('Call save_value Q1')
         self.assert_output()
 
-    ### helper functions  #####################################################
+    # helper functions  #######################################################
 
     def expect_cmd(self, cmd):
         self.expected = self.expected + cmd + '\n'
