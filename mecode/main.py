@@ -188,16 +188,18 @@ class G(object):
         used, most methods handle it automatically.
 
         """
-        self.write('G91')
-        self.movement_mode = 'relative'
+        if (self.movement_mode != 'relative'):
+            self.write('G91')
+            self.movement_mode = 'relative'
 
     def absolute(self):
         """ Enter absolute movement mode, in general this method should not be
         used, most methods handle it automatically.
 
         """
-        self.write('G90')
-        self.movement_mode = 'absolute'
+        if (self.movement_mode != 'absolute'):
+            self.write('G90')
+            self.movement_mode = 'absolute'
 
     def feed(self, rate):
         """ Set the feed rate (tool head speed) in mm/s
