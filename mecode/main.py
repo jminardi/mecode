@@ -397,7 +397,8 @@ class G(object):
         if axis is not None:
             self.write('G16 X Y {}'.format(axis))  # coordinate axis assignment
         self.write(plane_selector)
-        args = ' '.join([(k.upper() + str(v)) for k, v in kwargs.items()])
+        args = ' '.join([(k.upper() + str(v)) for
+                         k, v in sorted(kwargs.items(), key=lambda x: x[0])])
         if helix_dim is None:
             self.write('{} {} R{}'.format(command, args, radius))
         else:
@@ -772,3 +773,4 @@ class G(object):
         len_history = len(self.position_history)
         if len(self.speed_history) == 0 or self.speed_history[-1][1] != self.speed:
             self.speed_history.append((len_history - 1, self.speed))
+

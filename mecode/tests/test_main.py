@@ -127,7 +127,7 @@ class TestG(unittest.TestCase):
         self.g.arc(x=10, y=0)
         expected = """
         G17
-        G2 Y0 X10 R5.0
+        G2 X10 Y0 R5.0
         """
         self.assert_output(expected)
         self.assert_position({'x': 10, 'y': 0, 'z': 0})
@@ -145,7 +145,7 @@ class TestG(unittest.TestCase):
         expected += """
         G16 X Y D
         G17
-        G2 Y10 X0 R5.0 G1 D10
+        G2 X0 Y10 R5.0 G1 D10
         """
         self.assert_output(expected)
         self.assert_position({'x': 15, 'y': 10, 'A': 0, 'D': 10, 'z': 0})
@@ -158,7 +158,7 @@ class TestG(unittest.TestCase):
         expected = """
         G90
         G17
-        G2 Y10 X0 R5.0
+        G2 X0 Y10 R5.0
         G91
         """
         self.assert_output(expected)
@@ -168,7 +168,7 @@ class TestG(unittest.TestCase):
         expected += """
         G90
         G17
-        G2 Y10 X0 R0.0
+        G2 X0 Y10 R0.0
         G91
         """
         self.assert_output(expected)
@@ -357,7 +357,7 @@ class TestG(unittest.TestCase):
         expected += """
         G16 X Y A
         G19
-        G2 Y0 A10 R5.0
+        G2 A10 Y0 R5.0
         """
         self.assert_output(expected)
         self.assert_position({'x': 0, 'y': 0, 'z': 4, 'A': 10})
@@ -366,7 +366,7 @@ class TestG(unittest.TestCase):
         expected += """
         G16 X Y A
         G19
-        G3 Y0 A-10 R5.0
+        G3 A-10 Y0 R5.0
         """
         self.assert_output(expected)
         self.assert_position({'x': 0, 'y': 0, 'z': 4, 'A': 0})
