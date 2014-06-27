@@ -411,7 +411,8 @@ class G(object):
                                                   helix_dim.upper(), helix_len))
             kwargs[helix_dim] = helix_len
 
-        self._update_current_position(radius=radius, **kwargs)
+        self._update_current_position(radius=radius, directrion=directrion,
+                                      **kwargs)
 
     def abs_arc(self, direction='CW', radius='auto', **kwargs):
         """ Same as `arc` method, but positions are interpreted as absolute.
@@ -768,7 +769,7 @@ class G(object):
         return args
 
     def _update_current_position(self, mode='auto', x=None, y=None,
-                                 radius=None, **kwargs):
+                                 radius=None, direction='CW', **kwargs):
         if mode == 'auto':
             mode = 'relative' if self.is_relative else 'absolute'
 
@@ -795,12 +796,12 @@ class G(object):
             self.position_history.append((x, y, z))
         else:
             start = np.array(self.position_history[-1][:2])
-            self._record_circle(start=start, end=np.array((x, y)), radius=radius)
+            self._record_circle(start=start, end=np.array((x, y)), radius=radius, direction=direction)
         len_history = len(self.position_history)
         if len(self.speed_history) == 0 or self.speed_history[-1][1] != self.speed:
             self.speed_history.append((len_history - 1, self.speed))
 
-def _record_circle(self, start, end, radius):
+def _record_circle(self, start, end, radius, direction):
     import numpy as np
     step = -np.pi/8.0
     rot_mat = np.array([[np.cos(step), -np.sin(step)],
@@ -823,6 +824,8 @@ def _record_circle(self, start, end, radius):
 
 
 def get_center_point(x0, y0, x1, y1, r):
+    """ http://math.stackexchange.com/a/88067
+    """
     d = math.sqrt((x0-x1)**2 + (y0-y1)**2)
     if d == 0:
         return x0, x1
@@ -831,4 +834,4 @@ def get_center_point(x0, y0, x1, y1, r):
     return x, y
 
 
-print _record_circle(None, (10, 0), (0, 10), 10)
+print _record_circle(None, (10, 0), (0, 10), 10, 'CW')
