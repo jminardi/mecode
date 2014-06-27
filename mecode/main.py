@@ -54,19 +54,27 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # for python 2/3 compatibility
 try:
     isinstance("", basestring)
+
     def is_str(s):
         return isinstance(s, basestring)
+
     def encode2To3(s):
         return s
+
     def decode2To3(s):
         return s
+
 except NameError:
+
     def is_str(s):
         return isinstance(s, str)
+
     def encode2To3(s):
         return bytes(s, 'UTF-8')
+
     def decode2To3(s):
         return s.decode('UTF-8')
+
 
 class G(object):
 
@@ -126,7 +134,7 @@ class G(object):
         self.cal_data = cal_data
 
         self.current_position = defaultdict(float)
-        self.movement_mode = 'relative'
+        self.is_relative = True
 
         self.position_history = []
         self.speed = 0
@@ -158,8 +166,7 @@ class G(object):
         """
         self.teardown()
 
-
-    ### GCode Aliases  ########################################################
+    # GCode Aliases  ########################################################
 
     def set_home(self, x=None, y=None, **kwargs):
         """ Set the current position to the given position without moving.
@@ -188,16 +195,18 @@ class G(object):
         used, most methods handle it automatically.
 
         """
-        self.write('G91')
-        self.movement_mode = 'relative'
+        if not self.is_relative:
+            self.write('G91')
+            self.is_relative = True
 
     def absolute(self):
         """ Enter absolute movement mode, in general this method should not be
         used, most methods handle it automatically.
 
         """
-        self.write('G90')
-        self.movement_mode = 'absolute'
+        if self.is_relative:
+            self.write('G90')
+            self.is_relative = False
 
     def feed(self, rate):
         """ Set the feed rate (tool head speed) in mm/s
@@ -222,39 +231,30 @@ class G(object):
         """
         self.write('G4 P{}'.format(time))
 
-    ### Composed Functions  ###################################################
+    # Composed Functions  #####################################################
 
     def setup(self):
         """ Set the environment into a consistent state to start off. This
         method must be called before any other commands.
 
         """
-        outfile = self.outfile
-        if self.aerotech_include is True:
-            if outfile is not None:
-                self.out_fd = open(outfile, 'w+')  # open it if it is a path
-            with open(os.path.join(HERE, 'header.txt')) as fd:
-                lines = fd.readlines()
-                lines = [encode2To3(x) for x in lines]
-                self.out_fd.writelines(lines)
-                self.out_fd.write(encode2To3('\n'))
-            if self.header is not None:
-                with open(self.header) as fd:
-                    lines = fd.readlines()
-                    lines = [encode2To3(x) for x in lines]
-                    self.out_fd.writelines(lines)
-                    self.out_fd.write(encode2To3('\n'))
+        self._write_header()
+        if self.is_relative:
+            self.write('G91')
+        else:
+            self.write('G90')
 
     def teardown(self):
         """ Close the outfile file after writing the footer if opened. This
         method must be called once after all commands.
 
         """
-        if self.out_fd is not None and self.aerotech_include is True:
-            with open(os.path.join(HERE, 'footer.txt')) as fd:
-                lines = fd.readlines()
-                lines = [encode2To3(x) for x in lines]
-                self.out_fd.writelines(lines)
+        if self.out_fd is not None:
+            if self.aerotech_include is True:
+                with open(os.path.join(HERE, 'footer.txt')) as fd:
+                    lines = fd.readlines()
+                    lines = [encode2To3(x) for x in lines]
+                    self.out_fd.writelines(lines)
             if self.footer is not None:
                 with open(self.footer) as fd:
                     lines = fd.readlines()
@@ -290,7 +290,7 @@ class G(object):
         if self.cal_data is not None:
             cal_axis = self.cal_axis
             x_, y_ = self.current_position['x'], self.current_position['y']
-            if self.movement_mode == 'relative':
+            if self.is_relative:
                 if x is not None:
                     x_ = x_ + x
                 if y is not None:
@@ -318,9 +318,12 @@ class G(object):
     def abs_move(self, x=None, y=None, **kwargs):
         """ Same as `move` method, but positions are interpreted as absolute.
         """
-        self.absolute()
-        self.move(x=x, y=y, **kwargs)
-        self.relative()
+        if self.is_relative:
+            self.absolute()
+            self.move(x=x, y=y, **kwargs)
+            self.relative()
+        else:
+            self.move(x=x, y=y, **kwargs)
 
     def arc(self, direction='CW', radius='auto', helix_dim=None, helix_len=0,
             **kwargs):
@@ -380,7 +383,7 @@ class G(object):
             command = 'G3'
 
         values = [v for v in kwargs.values()]
-        if self.movement_mode == 'relative':
+        if self.is_relative:
             dist = math.sqrt(values[0] ** 2 + values[1] ** 2)
         else:
             k = [ky for ky in kwargs.keys()]
@@ -411,9 +414,12 @@ class G(object):
     def abs_arc(self, direction='CW', radius='auto', **kwargs):
         """ Same as `arc` method, but positions are interpreted as absolute.
         """
-        self.absolute()
-        self.arc(direction=direction, radius=radius, **kwargs)
-        self.relative()
+        if self.is_relative:
+            self.absolute()
+            self.arc(direction=direction, radius=radius, **kwargs)
+            self.relative()
+        else:
+            self.arc(direction=direction, radius=radius, **kwargs)
 
     def rect(self, x, y, direction='CW', start='LL'):
         """ Trace a rectangle with the given width and height.
@@ -582,7 +588,7 @@ class G(object):
         }
         self.arc(**kwargs)
 
-    ### AeroTech Specific Functions  ##########################################
+    # AeroTech Specific Functions  ############################################
 
     def get_axis_pos(self, axis):
         """ Gets the current position of the specified `axis`.
@@ -606,7 +612,7 @@ class G(object):
         self.write('Call togglePress P{}'.format(com_port))
 
     def align_nozzle(self, nozzle, floor=-72, deltafast=1, deltaslow=0.1,
-                    start=-15):
+                     start=-15):
         if nozzle == 'A':
             nozzle = 1
         elif nozzle == 'B':
@@ -623,7 +629,7 @@ class G(object):
         self.write(arg.format(start, deltaslow, nozzle, floor, deltafast))
 
     def align_zero_nozzle(self, nozzle, floor=-72, deltafast=1, deltaslow=0.1,
-                    start=-15):
+                          start=-15):
         if nozzle == 'A':
             nozzle = 1
         elif nozzle == 'B':
@@ -645,7 +651,7 @@ class G(object):
     def set_valve(self, num, value):
         self.write('$DO{}.0={}'.format(num, value))
 
-    def save_alignment(self, nozzle = 'A'):
+    def save_alignment(self, nozzle='A'):
         if nozzle == 'A':
             nozzle = 1
         elif nozzle == 'B':
@@ -658,10 +664,10 @@ class G(object):
             self.write('Call save_value Q1')
             self.write('Call save_value Q2')
             self.write('Call save_value Q3')
-            nozzle= 4
+            nozzle = 4
         self.write('Call save_value Q{}'.format(nozzle))
 
-    ### Public Interface  #####################################################
+    # Public Interface  #######################################################
 
     def interpolate(self, x, y):
         from scipy.interpolate import griddata
@@ -671,7 +677,7 @@ class G(object):
         return delta
 
     def show_interpolation_surface(self, interpolate=True):
-        from mpl_toolkits.mplot3d import Axes3D  #noqa
+        from mpl_toolkits.mplot3d import Axes3D  # noqa
         import matplotlib.pyplot as plt
         import numpy as np
         ax = plt.figure().gca(projection='3d')
@@ -712,8 +718,6 @@ class G(object):
         else:
             raise Exception("Invalid plotting backend! Choose one of mayavi or matplotlib.")
 
-
-
     def write(self, statement_in):
         if self.print_lines:
             print(statement_in)
@@ -734,7 +738,23 @@ class G(object):
                     raise RuntimeError(response)
                 return response[1:-1]
 
-    ### Private Interface  ####################################################
+    # Private Interface  ######################################################
+    def _write_header(self):
+        outfile = self.outfile
+        if outfile is not None:
+            self.out_fd = open(outfile, 'w+')  # open it if it is a path
+        if self.aerotech_include is True:
+            with open(os.path.join(HERE, 'header.txt')) as fd:
+                lines = fd.readlines()
+                lines = [encode2To3(x) for x in lines]
+                self.out_fd.writelines(lines)
+                self.out_fd.write(encode2To3('\n'))
+        if self.header is not None:
+            with open(self.header) as fd:
+                lines = fd.readlines()
+                lines = [encode2To3(x) for x in lines]
+                self.out_fd.writelines(lines)
+                self.out_fd.write(encode2To3('\n'))
 
     def _format_args(self, x, y, kwargs):
         args = []
@@ -748,7 +768,7 @@ class G(object):
 
     def _update_current_position(self, mode='auto', x=None, y=None, **kwargs):
         if mode == 'auto':
-            mode = self.movement_mode
+            mode = 'relative' if self.is_relative else 'absolute'
 
         if mode == 'relative':
             if x is not None:
