@@ -800,20 +800,26 @@ class G(object):
         if len(self.speed_history) == 0 or self.speed_history[-1][1] != self.speed:
             self.speed_history.append((len_history - 1, self.speed))
 
-    def _record_circle(self, start, end, radius):
-        import numpy as np
-        step = np.pi/8.0
-        rot_mat = np.array([[np.cos(step), -np.sin(step)],
-                            [np.sin(step), np.cos(step)]])
-        middle = get_center_point(start[0], start[1], end[0], end[1], radius)
-        delta = np.array(start) - np.array(middle)
-        prev_dist = 1e9
-        cur_dist = 1e8
-        while prev_dist > cur_dist:
-            prev_dist = cur_dist
-            cur_pt = delta.dot(rot_mat) + middle
-            cur_dist = np.linalg.norm(cur_pt - end)
-            self.position_history.append(np.concatenate([cur_pt, [0]]))
+def _record_circle(self, start, end, radius):
+    import numpy as np
+    step = -np.pi/8.0
+    rot_mat = np.array([[np.cos(step), -np.sin(step)],
+                        [np.sin(step), np.cos(step)]])
+    middle = get_center_point(start[0], start[1], end[0], end[1], radius)
+    cur_pt = np.array(start) - np.array(middle)
+    print 'cur_pt:', cur_pt
+    prev_dist = 1e9
+    cur_dist = 1e8
+    position_history = []
+    while prev_dist > cur_dist:
+        print 'cur_dist:', cur_dist
+        prev_dist = cur_dist
+        cur_pt = cur_pt.dot(rot_mat)
+        print 'cur_pt:', cur_pt
+        cur_dist = np.linalg.norm(cur_pt - end)
+        print 'new cur_dist:', cur_dist
+        position_history.append(np.concatenate([cur_pt, [0]]))
+    return position_history
 
 
 def get_center_point(x0, y0, x1, y1, r):
@@ -823,3 +829,6 @@ def get_center_point(x0, y0, x1, y1, r):
     x = ((x0 + x1)/2.0) + (((y0 - y1)/2.0) * math.sqrt(((2 * r)/d)**2 - 1))
     y = ((y0 + y1)/2.0) - (((x0 - x1)/2.0) * math.sqrt(((2 * r)/d)**2 - 1))
     return x, y
+
+
+print _record_circle(None, (10, 0), (0, 10), 10)
