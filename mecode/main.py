@@ -741,8 +741,9 @@ class G(object):
     # Private Interface  ######################################################
     def _write_header(self):
         outfile = self.outfile
-        if outfile is not None:
-            self.out_fd = open(outfile, 'w+')  # open it if it is a path
+        if outfile is not None or self.out_fd is not None:
+            if self.out_fd is None:  # open it if it is a path
+                self.out_fd = open(outfile, 'w+')
             if self.aerotech_include is True:
                 with open(os.path.join(HERE, 'header.txt')) as fd:
                     lines = fd.readlines()
