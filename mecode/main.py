@@ -136,7 +136,7 @@ class G(object):
         self.current_position = defaultdict(float)
         self.is_relative = True
 
-        self.position_history = []
+        self.position_history = [(0, 0, 0)]
         self.speed = 0
         self.speed_history = []
 
