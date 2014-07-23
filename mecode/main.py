@@ -343,16 +343,17 @@ class G(object):
                 current_y_pos = self.current_position['y']
                 x_distance = abs(x-current_x_pos)
                 y_distance = abs(y-current_y_pos)
-                
+                current_extruder_position = self.current_position['E']
             else:
                 x_distance = x
                 y_distance = y
+                current_extruder_position = 0
             line_length = math.sqrt(x_distance**2 + y_distance**2)
             volume = line_length*area
             filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier    
             
         if self.extrude is True:
-            kwargs['E'] = filament_length
+            kwargs['E'] = filament_length + current_extruder_position
             
         self._update_current_position(x=x, y=y, **kwargs)
         
