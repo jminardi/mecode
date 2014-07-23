@@ -81,7 +81,9 @@ class G(object):
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
                  aerotech_include=True, cal_data=None, cal_axis='A',
                  direct_write=False, printer_host='localhost',
-                 printer_port=8000, two_way_comm=True):
+                 printer_port=8000, two_way_comm=True, extrude = True, 
+                 filament_diameter = 1.75, layer_height = 0.22, 
+                 extrusion_width = 0.4, extrusion_multiplier = 1):
         """
         Parameters
         ----------
@@ -115,6 +117,7 @@ class G(object):
             If True, mecode waits for a response after every line of GCode is
             sent over the socket. The response is returned by the `write`
             method. Only applies if `direct_write` is True.
+        extrude : True or False
 
         """
         # string file name
@@ -311,6 +314,9 @@ class G(object):
                 kwargs[cal_axis] = delta
 
         self._update_current_position(x=x, y=y, **kwargs)
+        if self.extrude is True:
+            e_val = whatever
+            kwargs['E'] = e_val
 
         args = self._format_args(x, y, kwargs)
         self.write('G1 ' + args)
