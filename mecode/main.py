@@ -308,24 +308,10 @@ class G(object):
         >>> g.move(A=20)
 
         """
-        if self.extrude is True:
-            area = self.layer_height*(self.extrusion_width-self.layer_height) + 3.14159*(self.layer_height/2)**2
+        
         if self.cal_data is not None:
             cal_axis = self.cal_axis
             x_, y_ = self.current_position['x'], self.current_position['y']
-            if self.is_relative is not True:
-                current_x_pos = g.current_position['x']
-                current_y_pos = g.current_position['y']
-                x_distance = abs(x-current_x_pos)
-                y_distance = abs(y-current_y_pos)
-                
-            else:
-                x_distance = x
-                y_distance = y
-            line_length = math.sqrt(x_distance**2 + y_distance**2)
-            volume = line_length*area
-            filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier    
-            
             if self.is_relative:
                 if x is not None:
                     x_ = x_ + x
@@ -345,6 +331,27 @@ class G(object):
                 kwargs[cal_axis] += delta
             else:
                 kwargs[cal_axis] = delta
+                
+        if self.extrude is True:
+            area = self.layer_height*(self.extrusion_width-self.layer_height) + 3.14159*(self.layer_height/2)**2
+            if x is None:
+                x=0
+            if y is None:
+                y=0
+            if self.is_relative is not True:
+                current_x_pos = g.current_position['x']
+                current_y_pos = g.current_position['y']
+                x_distance = abs(x-current_x_pos)
+                y_distance = abs(y-current_y_pos)
+                
+            else:
+                x_distance = x
+                y_distance = y
+            line_length = math.sqrt(x_distance**2 + y_distance**2)
+            volume = line_length*area
+            filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier    
+            
+            
         if self.extrude is True:
             kwargs['E'] = filament_length
             
