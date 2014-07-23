@@ -339,8 +339,8 @@ class G(object):
             if y is None:
                 y=0
             if self.is_relative is not True:
-                current_x_pos = g.current_position['x']
-                current_y_pos = g.current_position['y']
+                current_x_pos = self.current_position['x']
+                current_y_pos = self.current_position['y']
                 x_distance = abs(x-current_x_pos)
                 y_distance = abs(y-current_y_pos)
                 
@@ -351,7 +351,6 @@ class G(object):
             volume = line_length*area
             filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier    
             
-            
         if self.extrude is True:
             kwargs['E'] = filament_length
             
@@ -360,7 +359,12 @@ class G(object):
 
         args = self._format_args(x, y, kwargs)
         self.write('G1 ' + args)
-
+    
+    def retract(self, retraction):
+        self.extrude = False
+        self.move(E = -retraction)
+        self.extrude = True
+        
     def abs_move(self, x=None, y=None, **kwargs):
         """ Same as `move` method, but positions are interpreted as absolute.
         """
