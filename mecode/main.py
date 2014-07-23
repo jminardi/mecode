@@ -81,7 +81,7 @@ class G(object):
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
                  aerotech_include=True, cal_data=None, cal_axis='A',
                  direct_write=False, printer_host='localhost',
-                 printer_port=8000, two_way_comm=True, extrude = True, 
+                 printer_port=8000, two_way_comm=True, extrude = False, 
                  filament_diameter = 1.75, layer_height = 0.22, 
                  extrusion_width = 0.4, extrusion_multiplier = 1):
         """
@@ -117,7 +117,19 @@ class G(object):
             If True, mecode waits for a response after every line of GCode is
             sent over the socket. The response is returned by the `write`
             method. Only applies if `direct_write` is True.
-        extrude : True or False
+        extrude : True or False (default: False)
+            If True, a flow calculation will be done in the move command. The 
+            neccesary length of filament to be pushed through on a move command
+            will be tagged on as a kwarg. ex. X5 Y5 E3
+        filament_diameter: float (default 1.75)
+            the diameter of FDM filament you are using
+        layer_height : float
+            Layer height for FDM printing. Only relavent when extrude = True.
+        extrusion width: float
+            total width of the capsule shaped cross section of a squashed filament.
+        extrusion_multiplier: float (default = 1)
+            The length of extrusion filament to be pushed through on a move 
+            command will be multiplied by this number before being applied.
 
         """
         # string file name
@@ -138,7 +150,13 @@ class G(object):
 
         self.current_position = defaultdict(float)
         self.is_relative = True
-
+                
+        self.extrude = extrude
+        self.filament_diameter = filament_diameter
+        self.layer_height = layer_height
+        self.extrusion_width = extrusion_width
+        self.extrusion_multiplier = extrusion_multiplier
+                
         self.position_history = [(0, 0, 0)]
         self.speed = 0
         self.speed_history = []
@@ -290,9 +308,24 @@ class G(object):
         >>> g.move(A=20)
 
         """
+        if self.extrude is True:
+            area = self.layer_height*(self.extrusion_width-self.layer_height) + 3.14159*(self.layer_height/2)**2
         if self.cal_data is not None:
             cal_axis = self.cal_axis
             x_, y_ = self.current_position['x'], self.current_position['y']
+            if self.is_relative is not True:
+                current_x_pos = g.current_position['x']
+                current_y_pos = g.current_position['y']
+                x_distance = abs(x-current_x_pos)
+                y_distance = abs(y-current_y_pos)
+                
+            else:
+                x_distance = x
+                y_distance = y
+            line_length = math.sqrt(x_distance**2 + y_distance**2)
+            volume = line_length*area
+            filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier    
+            
             if self.is_relative:
                 if x is not None:
                     x_ = x_ + x
@@ -312,11 +345,11 @@ class G(object):
                 kwargs[cal_axis] += delta
             else:
                 kwargs[cal_axis] = delta
-
-        self._update_current_position(x=x, y=y, **kwargs)
         if self.extrude is True:
-            e_val = whatever
-            kwargs['E'] = e_val
+            kwargs['E'] = filament_length
+            
+        self._update_current_position(x=x, y=y, **kwargs)
+        
 
         args = self._format_args(x, y, kwargs)
         self.write('G1 ' + args)
