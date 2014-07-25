@@ -1,6 +1,8 @@
 Mecode
 ======
 
+[![Build Status](https://travis-ci.org/jminardi/mecode.svg?branch=master)](https://travis-ci.org/jminardi/mecode)
+
 ### GCode for all
 
 Mecode is designed to simplify GCode generation. It is not a slicer, thus it

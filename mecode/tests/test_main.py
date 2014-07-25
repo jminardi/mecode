@@ -412,20 +412,6 @@ class TestG(unittest.TestCase):
         self.expect_cmd('Call togglePress P0')
         self.assert_output()
 
-    def test_align_nozzle(self):
-        self.g.align_nozzle('A')
-        self.expect_cmd('Call alignNozzle Q-15 R0.1 L1 I-72 J1')
-        self.assert_output()
-        with self.assertRaises(RuntimeError):
-            self.g.align_nozzle('F')
-
-    def test_align_zero_nozzle(self):
-        self.g.align_zero_nozzle('A')
-        self.expect_cmd('Call alignZeroNozzle Q-15 R0.1 L1 I-72 J1')
-        self.assert_output()
-        with self.assertRaises(RuntimeError):
-            self.g.align_zero_nozzle('F')
-
     def test_set_pressure(self):
         self.g.set_pressure(0, 10)
         self.expect_cmd('Call setPress P0 Q10')
@@ -434,11 +420,6 @@ class TestG(unittest.TestCase):
     def test_set_valve(self):
         self.g.set_valve(0, 1)
         self.expect_cmd('$DO0.0=1')
-        self.assert_output()
-
-    def test_save_alignment(self):
-        self.g.save_alignment()
-        self.expect_cmd('Call save_value Q1')
         self.assert_output()
 
     # helper functions  #######################################################

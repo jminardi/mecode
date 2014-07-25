@@ -81,9 +81,9 @@ except NameError:
 class G(object):
 
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
-                 aerotech_include=True, cal_data=None, cal_axis='A',
-                 direct_write=False, printer_host='localhost',
-                 printer_port=8000, two_way_comm=True):
+                 aerotech_include=True, direct_write=False,
+                 printer_host='localhost', printer_port=8000,
+                 two_way_comm=True):
         """
         Parameters
         ----------
@@ -100,12 +100,6 @@ class G(object):
             of the output file.
         aerotech_include : bool (default: True)
             If true, add aerotech specific functions and var defs to outfile.
-        cal_data : Nx3 array or None (default: None)
-            Numpy array representing calibration data. The array should be a
-            series of x, y, z points, where z is the delta to adjust for the
-            given x, y.
-        cal_axis : str (default: 'A')
-            The axis that the calibration deltas should apply to.
         direct_write : bool (default: False)
             If True a socket is opened to the printer and the GCode is sent
             directly over.
@@ -132,8 +126,6 @@ class G(object):
         self.header = header
         self.footer = footer
         self.aerotech_include = aerotech_include
-        self.cal_axis = cal_axis
-        self.cal_data = cal_data
 
         self.current_position = defaultdict(float)
         self.is_relative = True
@@ -289,29 +281,6 @@ class G(object):
         >>> g.move(A=20)
 
         """
-        if self.cal_data is not None:
-            cal_axis = self.cal_axis
-            x_, y_ = self.current_position['x'], self.current_position['y']
-            if self.is_relative:
-                if x is not None:
-                    x_ = x_ + x
-                if y is not None:
-                    y_ = y_ + y
-            else:
-                if x is not None:
-                    x_ = x
-                if y is not None:
-                    y_ = y
-            desired_position = self.interpolate(x_, y_)
-            x_current = self.current_position['x']
-            y_current = self.current_position['y']
-            current_interp_pos = self.interpolate(x_current, y_current)
-            delta = desired_position - current_interp_pos
-            if cal_axis in kwargs:
-                kwargs[cal_axis] += delta
-            else:
-                kwargs[cal_axis] = delta
-
         self._update_current_position(x=x, y=y, **kwargs)
 
         args = self._format_args(x, y, kwargs)
@@ -614,86 +583,13 @@ class G(object):
     def toggle_pressure(self, com_port):
         self.write('Call togglePress P{}'.format(com_port))
 
-    def align_nozzle(self, nozzle, floor=-72, deltafast=1, deltaslow=0.1,
-                     start=-15):
-        if nozzle == 'A':
-            nozzle = 1
-        elif nozzle == 'B':
-            nozzle = 2
-        elif nozzle == 'C':
-            nozzle = 3
-        elif nozzle == 'D':
-            nozzle = 4
-        elif nozzle == 'profilometer':
-            nozzle = 5
-        else:
-            raise RuntimeError('invalid nozzle: {}'.format(nozzle))
-        arg = 'Call alignNozzle Q{} R{} L{} I{} J{}'
-        self.write(arg.format(start, deltaslow, nozzle, floor, deltafast))
-
-    def align_zero_nozzle(self, nozzle, floor=-72, deltafast=1, deltaslow=0.1,
-                          start=-15):
-        if nozzle == 'A':
-            nozzle = 1
-        elif nozzle == 'B':
-            nozzle = 2
-        elif nozzle == 'C':
-            nozzle = 3
-        elif nozzle == 'D':
-            nozzle = 4
-        elif nozzle == 'profilometer':
-            nozzle = 5
-        else:
-            raise RuntimeError('invalid nozzle: {}'.format(nozzle))
-        arg = 'Call alignZeroNozzle Q{} R{} L{} I{} J{}'
-        self.write(arg.format(start, deltaslow, nozzle, floor, deltafast))
-
     def set_pressure(self, com_port, value):
         self.write('Call setPress P{} Q{}'.format(com_port, value))
 
     def set_valve(self, num, value):
         self.write('$DO{}.0={}'.format(num, value))
 
-    def save_alignment(self, nozzle='A'):
-        if nozzle == 'A':
-            nozzle = 1
-        elif nozzle == 'B':
-            nozzle = 2
-        elif nozzle == 'C':
-            nozzle = 3
-        elif nozzle == 'D':
-            nozzle = 4
-        elif nozzle == 'all':
-            self.write('Call save_value Q1')
-            self.write('Call save_value Q2')
-            self.write('Call save_value Q3')
-            nozzle = 4
-        self.write('Call save_value Q{}'.format(nozzle))
-
     # Public Interface  #######################################################
-
-    def interpolate(self, x, y):
-        from scipy.interpolate import griddata
-        cal_data = self.cal_data
-        delta = griddata((cal_data[:, 0], cal_data[:, 1]), cal_data[:, 2],
-                         (x, y), method='linear', fill_value=0)
-        return delta
-
-    def show_interpolation_surface(self, interpolate=True):
-        from mpl_toolkits.mplot3d import Axes3D  # noqa
-        import matplotlib.pyplot as plt
-        ax = plt.figure().gca(projection='3d')
-        d = self.cal_data
-        ax.scatter(d[:, 0], d[:, 1], d[:, 2])
-        if interpolate:
-            x_min, x_max = d[:, 0].min(), d[:, 0].max()
-            y_min, y_max = d[:, 1].min(), d[:, 1].max()
-            xx, yy = np.meshgrid(np.linspace(x_min, x_max, 50),
-                                 np.linspace(y_min, y_max, 50))
-            xxr, yyr = xx.reshape(-1), yy.reshape(-1)
-            zz = self.interpolate(xxr, yyr)
-            ax.scatter(xxr, yyr, zz, color='red')
-        plt.show()
 
     def view(self, backend='mayavi'):
         """ View the generated Gcode.
@@ -743,20 +639,21 @@ class G(object):
     # Private Interface  ######################################################
     def _write_header(self):
         outfile = self.outfile
-        if outfile is not None:
-            self.out_fd = open(outfile, 'w+')  # open it if it is a path
-        if self.aerotech_include is True:
-            with open(os.path.join(HERE, 'header.txt')) as fd:
-                lines = fd.readlines()
-                lines = [encode2To3(x) for x in lines]
-                self.out_fd.writelines(lines)
-                self.out_fd.write(encode2To3('\n'))
-        if self.header is not None:
-            with open(self.header) as fd:
-                lines = fd.readlines()
-                lines = [encode2To3(x) for x in lines]
-                self.out_fd.writelines(lines)
-                self.out_fd.write(encode2To3('\n'))
+        if outfile is not None or self.out_fd is not None:
+            if self.out_fd is None:  # open it if it is a path
+                self.out_fd = open(outfile, 'w+')
+            if self.aerotech_include is True:
+                with open(os.path.join(HERE, 'header.txt')) as fd:
+                    lines = fd.readlines()
+                    lines = [encode2To3(x) for x in lines]
+                    self.out_fd.writelines(lines)
+                    self.out_fd.write(encode2To3('\n'))
+            if self.header is not None:
+                with open(self.header) as fd:
+                    lines = fd.readlines()
+                    lines = [encode2To3(x) for x in lines]
+                    self.out_fd.writelines(lines)
+                    self.out_fd.write(encode2To3('\n'))
 
     def _format_args(self, x, y, kwargs):
         args = []

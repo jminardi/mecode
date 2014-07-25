@@ -16,7 +16,8 @@ class EFDPressureBox(object):
         
     def connect(self):
         self.s = serial.Serial(self.comport, baudrate=115200,
-                               parity='N', stopbits=1, bytesize=8)
+                               parity='N', stopbits=1, bytesize=8,
+                               timeout=2)
     
     def disconnect(self):
         self.s.close()
