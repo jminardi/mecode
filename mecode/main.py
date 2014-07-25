@@ -580,61 +580,11 @@ class G(object):
     def toggle_pressure(self, com_port):
         self.write('Call togglePress P{}'.format(com_port))
 
-    def align_nozzle(self, nozzle, floor=-72, deltafast=1, deltaslow=0.1,
-                     start=-15):
-        if nozzle == 'A':
-            nozzle = 1
-        elif nozzle == 'B':
-            nozzle = 2
-        elif nozzle == 'C':
-            nozzle = 3
-        elif nozzle == 'D':
-            nozzle = 4
-        elif nozzle == 'profilometer':
-            nozzle = 5
-        else:
-            raise RuntimeError('invalid nozzle: {}'.format(nozzle))
-        arg = 'Call alignNozzle Q{} R{} L{} I{} J{}'
-        self.write(arg.format(start, deltaslow, nozzle, floor, deltafast))
-
-    def align_zero_nozzle(self, nozzle, floor=-72, deltafast=1, deltaslow=0.1,
-                          start=-15):
-        if nozzle == 'A':
-            nozzle = 1
-        elif nozzle == 'B':
-            nozzle = 2
-        elif nozzle == 'C':
-            nozzle = 3
-        elif nozzle == 'D':
-            nozzle = 4
-        elif nozzle == 'profilometer':
-            nozzle = 5
-        else:
-            raise RuntimeError('invalid nozzle: {}'.format(nozzle))
-        arg = 'Call alignZeroNozzle Q{} R{} L{} I{} J{}'
-        self.write(arg.format(start, deltaslow, nozzle, floor, deltafast))
-
     def set_pressure(self, com_port, value):
         self.write('Call setPress P{} Q{}'.format(com_port, value))
 
     def set_valve(self, num, value):
         self.write('$DO{}.0={}'.format(num, value))
-
-    def save_alignment(self, nozzle='A'):
-        if nozzle == 'A':
-            nozzle = 1
-        elif nozzle == 'B':
-            nozzle = 2
-        elif nozzle == 'C':
-            nozzle = 3
-        elif nozzle == 'D':
-            nozzle = 4
-        elif nozzle == 'all':
-            self.write('Call save_value Q1')
-            self.write('Call save_value Q2')
-            self.write('Call save_value Q3')
-            nozzle = 4
-        self.write('Call save_value Q{}'.format(nozzle))
 
     # Public Interface  #######################################################
 
