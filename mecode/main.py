@@ -178,7 +178,7 @@ class G(object):
         >>> g.set_home(0, 0)
 
         """
-        args = self._format_args(x, y, z, kwargs)
+        args = self._format_args(x, y, z, **kwargs)
         self.write('G92 ' + args)
 
         self._update_current_position(mode='absolute', x=x, y=y, z=z, **kwargs)
@@ -290,7 +290,7 @@ class G(object):
         """
         self._update_current_position(x=x, y=y, z=z, **kwargs)
 
-        args = self._format_args(x, y, z, kwargs)
+        args = self._format_args(x, y, z, **kwargs)
         self.write('G1 ' + args)
 
     def abs_move(self, x=None, y=None, z=None, **kwargs):
@@ -361,6 +361,8 @@ class G(object):
             axis = dimensions[0].upper()
         else:
             raise RuntimeError(msg)
+        if self.z_axis != 'Z':
+            axis = self.z_axis
 
         if direction == 'CW':
             command = 'G2'
@@ -385,8 +387,7 @@ class G(object):
         if axis is not None:
             self.write('G16 X Y {}'.format(axis))  # coordinate axis assignment
         self.write(plane_selector)
-        args = ' '.join([(k.upper() + str(v)) for
-                         k, v in sorted(dims.items(), key=lambda x: x[0])])
+        args = self._format_args(**dims)
         if helix_dim is None:
             self.write('{} {} R{}'.format(command, args, radius))
         else:
@@ -686,7 +687,7 @@ class G(object):
                     self.out_fd.writelines(lines)
                     self.out_fd.write(encode2To3('\n'))
 
-    def _format_args(self, x, y, z, kwargs):
+    def _format_args(self, x=None, y=None, z=None, **kwargs):
         args = []
         if x is not None:
             args.append('{0}{1:f}'.format(self.x_axis, x))
@@ -695,8 +696,6 @@ class G(object):
         if z is not None:
             args.append('{0}{1:f}'.format(self.z_axis, z))
         args += ['{0}{1:f}'.format(k, v) for k, v in kwargs.items()]
-        if self.z_axis == 'A':
-            import ipdb; ipdb.set_trace()  # XXX BREAKPOINT
         args = ' '.join(args)
         return args
 
@@ -704,6 +703,13 @@ class G(object):
                                  **kwargs):
         if mode == 'auto':
             mode = 'relative' if self.is_relative else 'absolute'
+
+        if self.x_axis is not 'X':
+            kwargs[self.x_axis] = x
+        if self.y_axis is not 'Y':
+            kwargs[self.y_axis] = y
+        if self.z_axis is not 'Z':
+            kwargs[self.z_axis] = z
 
         if mode == 'relative':
             if x is not None:
@@ -720,7 +726,7 @@ class G(object):
             if y is not None:
                 self.current_position['y'] = y
             if z is not None:
-                self.current_position['z'] += z
+                self.current_position['z'] = z
             for dimention, delta in kwargs.items():
                 self.current_position[dimention] = delta
 
