@@ -608,7 +608,7 @@ class G(object):
         else:
             raise Exception("Invalid plotting backend! Choose one of mayavi or matplotlib.")
 
-    def write(self, statement_in, wait):
+    def write(self, statement_in, wait=False):
         if self.print_lines:
             print(statement_in)
         statement = encode2To3(statement_in + '\n')
