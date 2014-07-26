@@ -231,14 +231,14 @@ class G(object):
 
     def feed(self, rate):
         """ Set the feed rate (tool head speed) in mm/s
-
+UR
         Parameters
         ----------
         rate : float
             The speed to move the tool head in mm/s.
 
         """
-        self.write('F{}'.format(rate))
+        self.write('G1 F{}'.format(rate))
         self.speed = rate
 
     def dwell(self, time):
