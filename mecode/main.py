@@ -81,7 +81,7 @@ class G(object):
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
                  aerotech_include=True, direct_write=False,
                  printer_host='localhost', printer_port=8000,
-                 two_way_comm=True):
+                 two_way_comm=True, x_axis='X', y_axis='Y', z_axis='Z'):
         """
         Parameters
         ----------
@@ -109,6 +109,12 @@ class G(object):
             If True, mecode waits for a response after every line of GCode is
             sent over the socket. The response is returned by the `write`
             method. Only applies if `direct_write` is True.
+        x_axis : str (default 'X')
+            The name of the x axis (used in the exported gcode)
+        y_axis : str (default 'Y')
+            The name of the z axis (used in the exported gcode)
+        z_axis : str (default 'Z')
+            The name of the z axis (used in the exported gcode)
 
         """
         # string file name
@@ -124,6 +130,13 @@ class G(object):
         self.header = header
         self.footer = footer
         self.aerotech_include = aerotech_include
+        self.direct_write = direct_write
+        self.printer_host = printer_host
+        self.printer_port = printer_port
+        self.two_way_comm = two_way_comm
+        self.x_axis = x_axis
+        self.y_axis = y_axis
+        self.z_axis = z_axis
 
         self.current_position = defaultdict(float)
         self.is_relative = True
@@ -132,10 +145,6 @@ class G(object):
         self.speed = 0
         self.speed_history = []
 
-        self.direct_write = direct_write
-        self.printer_host = printer_host
-        self.printer_port = printer_port
-        self.two_way_comm = two_way_comm
         self._socket = None
 
         self.setup()
@@ -160,7 +169,7 @@ class G(object):
 
     # GCode Aliases  ########################################################
 
-    def set_home(self, x=None, y=None, **kwargs):
+    def set_home(self, x=None, y=None, z=None, **kwargs):
         """ Set the current position to the given position without moving.
 
         Example
@@ -169,10 +178,10 @@ class G(object):
         >>> g.set_home(0, 0)
 
         """
-        args = self._format_args(x, y, kwargs)
+        args = self._format_args(x, y, z, kwargs)
         self.write('G92 ' + args)
 
-        self._update_current_position(mode='absolute', x=x, y=y, **kwargs)
+        self._update_current_position(mode='absolute', x=x, y=y, z=z, **kwargs)
 
     def reset_home(self):
         """ Reset the position back to machine coordinates without moving.
@@ -262,7 +271,7 @@ class G(object):
         """
         self.abs_move(x=0, y=0)
 
-    def move(self, x=None, y=None, **kwargs):
+    def move(self, x=None, y=None, z=None, **kwargs):
         """ Move the tool head to the given position. This method operates in
         relative mode unless a manual call to `absolute` was given previously.
         If an absolute movement is desired, the `abs_move` method is
@@ -272,30 +281,30 @@ class G(object):
         --------
         >>> # move the tool head 10 mm in x and 10 mm in y
         >>> g.move(x=10, y=10)
-        >>> # the x and y keywords may be omitted:
-        >>> g.move(10, 10)
+        >>> # the x, y, and z keywords may be omitted:
+        >>> g.move(10, 10, 10)
 
         >>> # move the A axis up 20 mm
         >>> g.move(A=20)
 
         """
-        self._update_current_position(x=x, y=y, **kwargs)
+        self._update_current_position(x=x, y=y, z=z, **kwargs)
 
-        args = self._format_args(x, y, kwargs)
+        args = self._format_args(x, y, z, kwargs)
         self.write('G1 ' + args)
 
-    def abs_move(self, x=None, y=None, **kwargs):
+    def abs_move(self, x=None, y=None, z=None, **kwargs):
         """ Same as `move` method, but positions are interpreted as absolute.
         """
         if self.is_relative:
             self.absolute()
-            self.move(x=x, y=y, **kwargs)
+            self.move(x=x, y=y, z=z, **kwargs)
             self.relative()
         else:
-            self.move(x=x, y=y, **kwargs)
+            self.move(x=x, y=y, z=z, **kwargs)
 
-    def arc(self, direction='CW', radius='auto', helix_dim=None, helix_len=0,
-            **kwargs):
+    def arc(self, x=None, y=None, z=None, direction='CW', radius='auto',
+            helix_dim=None, helix_len=0, **kwargs):
         """ Arc to the given point with the given radius and in the given
         direction. If helix_dim and helix_len are specified then the tool head
         will also perform a linear movement through the given dimension while
@@ -304,7 +313,7 @@ class G(object):
         Parameters
         ----------
         points : floats
-            Must specify two points as kwargs, e.g. X=5, Y=5
+            Must specify two points as kwargs, e.g. x=5, y=5
         direction : str (either 'CW' or 'CCW') (default: 'CW')
             The direction to execute the arc in.
         radius : 'auto' or float (default: 'auto')
@@ -328,10 +337,17 @@ class G(object):
         >>> g.arc(x=10, y=10, radius=50, helix_dim='A', helix_len=5)
 
         """
-        msg = 'Must specify point with 2 dimensions as keywords, e.g. X=0, Y=10'
-        if len(kwargs) != 2:
+        dims = dict(kwargs)
+        if x is not None:
+            dims['x'] = x
+        if y is not None:
+            dims['y'] = y
+        if z is not None:
+            dims['z'] = z
+        msg = 'Must specify two of x, y, or z.'
+        if len(dims) != 2:
             raise RuntimeError(msg)
-        dimensions = [k.lower() for k in kwargs.keys()]
+        dimensions = [k.lower() for k in dims.keys()]
         if 'x' in dimensions and 'y' in dimensions:
             plane_selector = 'G17'  # XY plane
             axis = helix_dim
@@ -351,11 +367,11 @@ class G(object):
         elif direction == 'CCW':
             command = 'G3'
 
-        values = [v for v in kwargs.values()]
+        values = [v for v in dims.values()]
         if self.is_relative:
             dist = math.sqrt(values[0] ** 2 + values[1] ** 2)
         else:
-            k = [ky for ky in kwargs.keys()]
+            k = [ky for ky in dims.keys()]
             cp = self.current_position
             dist = math.sqrt(
                 (cp[k[0]] - values[0]) ** 2 + (cp[k[1]] - values[1]) ** 2
@@ -370,15 +386,15 @@ class G(object):
             self.write('G16 X Y {}'.format(axis))  # coordinate axis assignment
         self.write(plane_selector)
         args = ' '.join([(k.upper() + str(v)) for
-                         k, v in sorted(kwargs.items(), key=lambda x: x[0])])
+                         k, v in sorted(dims.items(), key=lambda x: x[0])])
         if helix_dim is None:
             self.write('{} {} R{}'.format(command, args, radius))
         else:
             self.write('{} {} R{} G1 {}{}'.format(command, args, radius,
                                                   helix_dim.upper(), helix_len))
-            kwargs[helix_dim] = helix_len
+            dims[helix_dim] = helix_len
 
-        self._update_current_position(**kwargs)
+        self._update_current_position(**dims)
 
     def abs_arc(self, direction='CW', radius='auto', **kwargs):
         """ Same as `arc` method, but positions are interpreted as absolute.
@@ -633,6 +649,24 @@ class G(object):
                     raise RuntimeError(response)
                 return response[1:-1]
 
+    def rename_axis(self, x=None, y=None, z=None):
+        """ Replaces the x, y, or z axis with the given name.
+
+        Examples
+        --------
+        >>> g.rename_axis(z='A')
+
+        """
+        if x is not None:
+            self.x_axis = x
+        elif y is not None:
+            self.y_axis = y
+        elif z is not None:
+            self.z_axis = z
+        else:
+            msg = 'Must specify new name for x, y, or z only'
+            raise RuntimeError(msg)
+
     # Private Interface  ######################################################
     def _write_header(self):
         outfile = self.outfile
@@ -652,17 +686,22 @@ class G(object):
                     self.out_fd.writelines(lines)
                     self.out_fd.write(encode2To3('\n'))
 
-    def _format_args(self, x, y, kwargs):
+    def _format_args(self, x, y, z, kwargs):
         args = []
         if x is not None:
-            args.append('X{0:f}'.format(x))
+            args.append('{0}{1:f}'.format(self.x_axis, x))
         if y is not None:
-            args.append('Y{0:f}'.format(y))
+            args.append('{0}{1:f}'.format(self.y_axis, y))
+        if z is not None:
+            args.append('{0}{1:f}'.format(self.z_axis, z))
         args += ['{0}{1:f}'.format(k, v) for k, v in kwargs.items()]
+        if self.z_axis == 'A':
+            import ipdb; ipdb.set_trace()  # XXX BREAKPOINT
         args = ' '.join(args)
         return args
 
-    def _update_current_position(self, mode='auto', x=None, y=None, **kwargs):
+    def _update_current_position(self, mode='auto', x=None, y=None, z=None,
+                                 **kwargs):
         if mode == 'auto':
             mode = 'relative' if self.is_relative else 'absolute'
 
@@ -671,6 +710,8 @@ class G(object):
                 self.current_position['x'] += x
             if y is not None:
                 self.current_position['y'] += y
+            if z is not None:
+                self.current_position['z'] += z
             for dimention, delta in kwargs.items():
                 self.current_position[dimention] += delta
         else:
@@ -678,6 +719,8 @@ class G(object):
                 self.current_position['x'] = x
             if y is not None:
                 self.current_position['y'] = y
+            if z is not None:
+                self.current_position['z'] += z
             for dimention, delta in kwargs.items():
                 self.current_position[dimention] = delta
 
@@ -687,6 +730,7 @@ class G(object):
         self.position_history.append((x, y, z))
 
         len_history = len(self.position_history)
-        if len(self.speed_history) == 0 or self.speed_history[-1][1] != self.speed:
+        if (len(self.speed_history) == 0
+            or self.speed_history[-1][1] != self.speed):
             self.speed_history.append((len_history - 1, self.speed))
 
