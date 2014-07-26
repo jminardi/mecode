@@ -389,9 +389,9 @@ class G(object):
         self.write(plane_selector)
         args = self._format_args(**dims)
         if helix_dim is None:
-            self.write('{} {} R{}'.format(command, args, radius))
+            self.write('{0} {1} R{2:f}'.format(command, args, radius))
         else:
-            self.write('{} {} R{} G1 {}{}'.format(command, args, radius,
+            self.write('{0} {1} R{2:f} G1 {3}{4}'.format(command, args, radius,
                                                   helix_dim.upper(), helix_len))
             dims[helix_dim] = helix_len
 
