@@ -334,19 +334,30 @@ UR
                 
         if self.extrude is True:
             area = self.layer_height*(self.extrusion_width-self.layer_height) + 3.14159*(self.layer_height/2)**2
-            if x is None:
-                x=0
-            if y is None:
-                y=0
+            
             if self.is_relative is not True:
+                if x is None:
+                    x_move=self.current_position['x']
+                else:
+                    x_move = x
+                if y is None:
+                    y_move=self.current_position['y']
+                else:
+                    y_move = y
                 current_x_pos = self.current_position['x']
                 current_y_pos = self.current_position['y']
-                x_distance = abs(x-current_x_pos)
-                y_distance = abs(y-current_y_pos)
+                x_distance = abs(x_move-current_x_pos)
+                y_distance = abs(y_move-current_y_pos)
                 current_extruder_position = self.current_position['E']
             else:
-                x_distance = x
-                y_distance = y
+                if x is None:
+                    x_distance=0
+                else:
+                    x_distance = x
+                if y is None:
+                    y_distance=0
+                else:
+                    y_distance = y
                 current_extruder_position = 0
             line_length = math.sqrt(x_distance**2 + y_distance**2)
             volume = line_length*area
