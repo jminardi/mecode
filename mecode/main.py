@@ -620,14 +620,17 @@ class G(object):
                 self._socket = socket.socket(socket.AF_INET,
                                              socket.SOCK_STREAM)
                 self._socket.connect((self.printer_host, self.printer_port))
-            self._socket.send(statement)
-            if wait is True:
-                response = self._socket.recv(8192)
+            if wait is not True:
+                self._socket.send(statement)
+            else:
+                response = self._socket.recv(65536)
+                self._socket.send(statement)
+                response = self._socket.recv(65536)
+                print 'response:', response
                 response = decode2To3(response)
                 if response[0] != '%':
                     raise RuntimeError(response)
-                responses = response.split('%')
-                return responses[:-1]
+                return response[1:-1]
 
     # Private Interface  ######################################################
     def _write_header(self):
