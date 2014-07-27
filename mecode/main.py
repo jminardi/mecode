@@ -81,7 +81,7 @@ class G(object):
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
                  aerotech_include=True, direct_write=False,
                  printer_host='localhost', printer_port=8000,
-                 two_way_comm=True):
+                 ):
         """
         Parameters
         ----------
@@ -105,10 +105,6 @@ class G(object):
             Hostname of the printer, only used if `direct_write` is True.
         printer_port : int (default: 8000)
             Port of the printer, only used if `direct_write` is True.
-        two_way_comm : bool (default: True)
-            If True, mecode waits for a response after every line of GCode is
-            sent over the socket. The response is returned by the `write`
-            method. Only applies if `direct_write` is True.
 
         """
         # string file name
@@ -135,7 +131,6 @@ class G(object):
         self.direct_write = direct_write
         self.printer_host = printer_host
         self.printer_port = printer_port
-        self.two_way_comm = two_way_comm
         self._socket = None
 
         self.setup()
@@ -563,7 +558,7 @@ class G(object):
         """ Gets the current position of the specified `axis`.
         """
         cmd = 'AXISSTATUS({}, DATAITEM_PositionFeedback)'.format(axis.upper())
-        pos = self.write(cmd)
+        pos = self.write(cmd, wait=True)
         return float(pos)
 
     def set_cal_file(self, path):
@@ -613,7 +608,7 @@ class G(object):
         else:
             raise Exception("Invalid plotting backend! Choose one of mayavi or matplotlib.")
 
-    def write(self, statement_in):
+    def write(self, statement_in, wait=False):
         if self.print_lines:
             print(statement_in)
         statement = encode2To3(statement_in + '\n')
@@ -625,9 +620,13 @@ class G(object):
                 self._socket = socket.socket(socket.AF_INET,
                                              socket.SOCK_STREAM)
                 self._socket.connect((self.printer_host, self.printer_port))
-            self._socket.send(statement)
-            if self.two_way_comm is True:
-                response = self._socket.recv(8192)
+            if wait is not True:
+                self._socket.send(statement)
+            else:
+                response = self._socket.recv(65536)
+                self._socket.send(statement)
+                response = self._socket.recv(65536)
+                print 'response:', response
                 response = decode2To3(response)
                 if response[0] != '%':
                     raise RuntimeError(response)
