@@ -373,9 +373,12 @@ UR
         self.write('G1 ' + args)
     
     def retract(self, retraction):
-        self.extrude = False
-        self.move(E = -retraction)
-        self.extrude = True
+        if self.extrude is False:
+            self.move(E = -retraction)
+        else:
+            self.extrude = False
+            self.move(E = -retraction)
+            self.extrude = True
         
     def abs_move(self, x=None, y=None, **kwargs):
         """ Same as `move` method, but positions are interpreted as absolute.
