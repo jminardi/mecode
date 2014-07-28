@@ -74,7 +74,7 @@ class TestG(unittest.TestCase):
 
     def test_feed(self):
         self.g.feed(10)
-        self.expect_cmd('F10')
+        self.expect_cmd('G1 F10')
         self.assert_output()
 
     def test_dwell(self):
@@ -101,11 +101,9 @@ class TestG(unittest.TestCase):
         self.assert_position({'x': 0, 'y': 0, 'z': 0})
 
     def test_move(self):
-           
-        g = self.g
-        g.move(10, 10)
+        self.g.move(10, 10)
         self.assert_position({'x': 10.0, 'y': 10.0, 'z': 0})
-        g.move(10, 10, A=50)
+        self.g.move(10, 10, A=50)
         self.assert_position({'x': 20.0, 'y': 20.0, 'A': 50, 'z': 0})
         self.expect_cmd("""
         G1 X10.000000 Y10.000000
@@ -113,56 +111,66 @@ class TestG(unittest.TestCase):
         """)
         self.assert_output()
         
-        ##test extrusion in absolute movement
-        #self.g = G(extrude = True, layer_height = 0.22, extrusion_width = 0.4,
-        #filament_diameter = 1.75, extrusion_multiplier = 1)
-        #self.assert_position({'x': 0.0, 'y': 0.0, 'Z': 0, 'E': 0})
-        #g.abs_move(x=30, y=30)
-        #self.assert_position({'x': 30.0, 'y': 30.0, 'Z': 0, 'E': 1.369053})
-        #self.expect_cmd("""
-        #G90
-        #G1 X30.000000 Y30.000000 E1.369053
-        #G91
-        #""")
-        #self.assert_output()
-        #
-        #g.move(x=10)
-        #self.assert_position({'x': 40.0, 'y': 30.0, 'Z': 0, 'E': 1.691741})
-        #self.expect_cmd("""
-        #G1 X10.000000 E0.322689
-        #""")
-        #self.assert_output()
-        #
-        #g.extrusion_multiplier = 2
-        #g.move(y=10)
-        #self.assert_position({'x': 40.0, 'y': 40.0, 'Z': 0, 'E': 2.337119})
-        #self.expect_cmd("""
-        #G1 Y10.000000 E0.645378
-        #""")
-        #self.assert_output()
-        #
-        #g.move(Z=10)
-        #self.assert_position({'x': 40.0, 'y': 40.0, 'Z': 10, 'E': 2.337119})
-        #self.expect_cmd("""
-        #G1 Z10.000000 E0.000000
-        #""")
-        #self.assert_output()
-        #
-        #g.abs_move(Z=20)
-        #self.assert_position({'x': 40.0, 'y': 40.0, 'Z': 20, 'E': 2.337119})
-        #self.expect_cmd("""
-        #G90
-        #G1 Z20.000000 E2.337120
-        #G91
-        #""")
-        #self.assert_output()
+        #test extrusion in absolute movement
+        self.g.extrude = True
+        self.g.layer_height = 0.22
+        self.g.extrusion_width = 0.4
+        self.g.filament_diameter = 1.75
+        self.g.extrusion_multiplier = 1
+        self.g.abs_move(x=30, y=30)
+        self.assert_position({'x': 30.0, 'y': 30.0, 'z': 0.0, 'A': 50.0,
+                                        'E': 0.45635101227893116})
+        self.expect_cmd("""
+        G90
+        G1 X30.000000 Y30.000000 E0.456351
+        G91
+        """)
+        
+       
+        
+        self.assert_output()
+        
+        self.g.move(x=10)
+        self.assert_position({'x': 40.0, 'y': 30.0, 'A':50, 'z': 0, 
+                        'E': 0.7790399076627088})
+        self.expect_cmd("""
+        G1 X10.000000 E0.322689
+        """)
+        self.assert_output()
+        
+        self.g.extrusion_multiplier = 2
+        self.g.move(y=10)
+        self.assert_position({'x': 40.0, 'y': 40.0, 'A':50,  'z': 0, 
+                                'E': 1.4244176984302641})
+        self.expect_cmd("""
+        G1 Y10.000000 E0.645378
+        """)
+        self.assert_output()
+        
+        self.g.move(Z=10)
+        self.assert_position({'x': 40.0, 'y': 40.0, 'A': 50, 'Z': 10, 'z':0.0,
+                                'E': 1.4244176984302641})
+        self.expect_cmd("""
+        G1 Z10.000000 E0.000000
+        """)
+        self.assert_output()
+        
+        self.g.abs_move(Z=20)
+        self.assert_position({'x': 40.0, 'y': 40.0, 'Z': 20, 'A':50, 'z':0.0,
+                            'E': 1.4244176984302641})
+        self.expect_cmd("""
+        G90
+        G1 Z20.000000 E1.424418
+        G91
+        """)
+        self.assert_output()
     
     def test_retraction(self):
         g=self.g
         g.retract(retraction = 5)
         self.assert_position({'x': 0.0, 'y': 0.0, 'z': 0.0, 'E':-5})
         self.expect_cmd("""
-        G1 E-5
+        G1 E-5.000000
         """)
         self.assert_output()
                 
