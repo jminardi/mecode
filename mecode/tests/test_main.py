@@ -106,9 +106,12 @@ class TestG(unittest.TestCase):
         self.assert_position({'x': 10.0, 'y': 10.0, 'z': 0})
         g.move(10, 10, A=50)
         self.assert_position({'x': 20.0, 'y': 20.0, 'A': 50, 'z': 0})
+        g.move(10, 10, 10)
+        self.assert_position({'x': 30.0, 'y': 30.0, 'A': 50, 'z': 10})
         self.expect_cmd("""
         G1 X10.000000 Y10.000000
         G1 X10.000000 Y10.000000 A50.000000
+        G1 X10.000000 Y10.000000 Z10.000000
         """)
         self.assert_output()
 
@@ -123,14 +126,14 @@ class TestG(unittest.TestCase):
         self.assert_output()
         self.assert_position({'x': 10, 'y': 10, 'z': 0})
 
-        self.g.abs_move(5, 5)
+        self.g.abs_move(5, 5, 5)
         self.expect_cmd("""
         G90
-        G1 X5.000000 Y5.000000
+        G1 X5.000000 Y5.000000 Z5.000000
         G91
         """)
         self.assert_output()
-        self.assert_position({'x': 5, 'y': 5, 'z': 0})
+        self.assert_position({'x': 5, 'y': 5, 'z': 5})
 
         self.g.abs_move(15, 0, D=5)
         self.expect_cmd("""
@@ -139,7 +142,7 @@ class TestG(unittest.TestCase):
         G91
         """)
         self.assert_output()
-        self.assert_position({'x': 15, 'y': 0, 'D': 5, 'z': 0})
+        self.assert_position({'x': 15, 'y': 0, 'D': 5, 'z': 5})
 
         self.g.absolute()
         self.g.abs_move(19, 18, D=6)
@@ -148,7 +151,7 @@ class TestG(unittest.TestCase):
         G1 X19.000000 Y18.000000 D6.000000
         """)
         self.assert_output()
-        self.assert_position({'x': 19, 'y': 18, 'D': 6, 'z': 0})
+        self.assert_position({'x': 19, 'y': 18, 'D': 6, 'z': 5})
         self.g.relative()
 
     def test_arc(self):
@@ -158,7 +161,7 @@ class TestG(unittest.TestCase):
         self.g.arc(x=10, y=0)
         self.expect_cmd("""
         G17
-        G2 X10 Y0 R5.0
+        G2 X10.000000 Y0.000000 R5.000000
         """)
         self.assert_output()
         self.assert_position({'x': 10, 'y': 0, 'z': 0})
@@ -167,7 +170,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G16 X Y A
         G18
-        G3 A0 X5 R5
+        G3 X5.000000 A0.000000 R5.000000
         """)
         self.assert_output()
         self.assert_position({'x': 15, 'y': 0, 'A': 0, 'z': 0})
@@ -176,10 +179,19 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G16 X Y D
         G17
-        G2 X0 Y10 R5.0 G1 D10
+        G2 X0.000000 Y10.000000 R5.000000 G1 D10
         """)
         self.assert_output()
         self.assert_position({'x': 15, 'y': 10, 'A': 0, 'D': 10, 'z': 0})
+
+        self.g.arc(0, 10, helix_dim='D', helix_len=10)
+        self.expect_cmd("""
+        G16 X Y D
+        G17
+        G2 X0.000000 Y10.000000 R5.000000 G1 D10
+        """)
+        self.assert_output()
+        self.assert_position({'x': 15, 'y': 20, 'A': 0, 'D': 20, 'z': 0})
 
         with self.assertRaises(RuntimeError):
             self.g.arc(x=10, y=10, radius=1)
@@ -190,7 +202,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G90
         G17
-        G2 X0 Y10 R5.0
+        G2 X0.000000 Y10.000000 R5.000000
         G91
         """)
         self.assert_output()
@@ -200,7 +212,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G90
         G17
-        G2 X0 Y10 R0.0
+        G2 X0.000000 Y10.000000 R0.000000
         G91
         """)
         self.assert_output()
@@ -211,7 +223,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G90
         G17
-        G2 X0 Y20 R5.0
+        G2 X0.000000 Y20.000000 R5.000000
         """)
         self.assert_output()
         self.assert_position({'x': 0, 'y': 20, 'z': 0})
@@ -384,7 +396,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G16 X Y Z
         G18
-        G3 X0 Z4 R2.0
+        G3 X0.000000 Z4.000000 R2.000000
         """)
         self.assert_output()
         self.assert_position({'y': 0, 'x': 0, 'z': 4})
@@ -393,7 +405,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G16 X Y A
         G19
-        G2 A10 Y0 R5.0
+        G2 Y0.000000 A10.000000 R5.000000
         """)
         self.assert_output()
         self.assert_position({'x': 0, 'y': 0, 'z': 4, 'A': 10})
@@ -402,7 +414,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G16 X Y A
         G19
-        G3 A-10 Y0 R5.0
+        G3 Y0.000000 A-10.000000 R5.000000
         """)
         self.assert_output()
         self.assert_position({'x': 0, 'y': 0, 'z': 4, 'A': 0})
@@ -420,6 +432,55 @@ class TestG(unittest.TestCase):
     def test_set_valve(self):
         self.g.set_valve(0, 1)
         self.expect_cmd('$DO0.0=1')
+        self.assert_output()
+
+    def test_rename_axis(self):
+        self.g.rename_axis(z='A')
+        self.g.move(10, 10, 10)
+        self.assert_position({'x': 10.0, 'y': 10.0, 'A': 10, 'z': 10})
+        self.expect_cmd("""
+        G1 X10.000000 Y10.000000 A10.000000
+        """)
+        self.assert_output()
+
+        self.g.rename_axis(z='B')
+        self.g.move(10, 10, 10)
+        self.assert_position({'x': 20.0, 'y': 20.0, 'z': 20, 'A': 10, 'B': 10})
+        self.expect_cmd("""
+        G1 X10.000000 Y10.000000 B10.000000
+        """)
+        self.assert_output()
+
+        self.g.rename_axis(x='W')
+        self.g.move(10, 10, 10)
+        self.assert_position({'x': 30.0, 'y': 30.0, 'z': 30, 'A': 10, 'B': 20,
+                              'W': 10})
+        self.expect_cmd("""
+        G1 W10.000000 Y10.000000 B10.000000
+        """)
+        self.assert_output()
+
+        self.g.rename_axis(x='X')
+        self.g.arc(x=10, z=10)
+        self.assert_position({'x': 40.0, 'y': 30.0, 'z': 40, 'A': 10, 'B': 30,
+                              'W': 10})
+        self.expect_cmd("""
+        G16 X Y B
+        G18
+        G2 X10.000000 B10.000000 R7.071068
+        """)
+        self.assert_output()
+
+        self.g.abs_arc(x=0, z=0)
+        self.assert_position({'x': 0.0, 'y': 30.0, 'z': 0, 'A': 10, 'B': 0,
+                              'W': 10})
+        self.expect_cmd("""
+        G90
+        G16 X Y B
+        G18
+        G2 X0.000000 B0.000000 R28.284271
+        G91
+        """)
         self.assert_output()
 
     # helper functions  #######################################################
