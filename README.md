@@ -38,7 +38,7 @@ are writing to a file. This can be accomplished automatically by using G as
 a context manager like so:
 
 ```python
-with G(output='file.gcode') as g:
+with G(outfile='file.gcode') as g:
     g.move(10)
 ```
 
@@ -79,11 +79,7 @@ interpolation and visualization. An easy way to install them is to use
 
 TODO
 ----
-* split footer.txt into different files.
-* replace "z" with arbitrary axis name on the fly.
 * add pressure box comport to `__init__()` method
-* is set_valve the best name?
-* finalize interface on aerotech functions.
 * build out multi-nozzle support
     * include multi-nozzle support in view method.
 * factor out aerotech specific methods into their own class
