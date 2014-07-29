@@ -456,11 +456,36 @@ UR
             dist = math.sqrt(
                 (cp[k[0]] - values[0]) ** 2 + (cp[k[1]] - values[1]) ** 2
             )
+            print "CP: {} {}".format(cp[k[0]], cp[k[1]])
+            print "values: {} {}".format(values[0], values[1])
         if radius == 'auto':
             radius = dist / 2.0
-        elif radius < dist / 2.0:
+        elif abs(radius) < dist / 2.0:
             msg = 'Radius {} to small for distance {}'.format(radius, dist)
             raise RuntimeError(msg)
+
+        #extrude feature implementation
+        # only designed for flow calculations in x-y plane
+        if self.extrude is True:
+            area = self.layer_height*(self.extrusion_width-self.layer_height) + 3.14159*(self.layer_height/2)**2         
+            if self.is_relative is not True:
+                current_extruder_position = self.current_position['E']
+            else:
+                current_extruder_position = 0    
+            
+            circle_circumference = 2*3.14159*abs(radius)  
+            
+            arc_angle = ((2*math.asin(dist/(2*abs(radius))))/(2*3.14159))*360
+            shortest_arc_length = (arc_angle/180)*3.14159*abs(radius)
+            if radius > 0:
+                arc_length = shortest_arc_length
+            else:
+                arc_length = circle_circumference - shortest_arc_length
+            volume = arc_length*area
+            filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier
+            
+        if self.extrude is True:
+            kwargs['E'] = filament_length + current_extruder_position     
 
         if axis is not None:
             self.write('G16 X Y {}'.format(axis))  # coordinate axis assignment
@@ -473,7 +498,8 @@ UR
             self.write('{} {} R{} G1 {}{}'.format(command, args, radius,
                                                   helix_dim.upper(), helix_len))
             kwargs[helix_dim] = helix_len
-
+        
+                 
         self._update_current_position(**kwargs)
 
     def abs_arc(self, direction='CW', radius='auto', **kwargs):
