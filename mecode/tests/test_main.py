@@ -483,6 +483,14 @@ class TestG(unittest.TestCase):
         """)
         self.assert_output()
 
+        self.g.meander(10, 10, 10)
+        self.expect_cmd("""
+        G1 X10.000000
+        G1 Y10.000000
+        G1 X-10.000000
+        """)
+        self.assert_output()
+
     # helper functions  #######################################################
 
     def expect_cmd(self, cmd):
