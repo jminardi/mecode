@@ -622,7 +622,23 @@ class G(object):
             import matplotlib.pyplot as plt
             fig = plt.figure()
             ax = fig.gca(projection='3d')
-            ax.plot(history[:, 0], history[:, 1], history[:, 2])
+            ax.set_aspect('equal')
+            X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
+            ax.plot(X, Y, Z)
+
+            # Hack to keep 3D plot's aspect ratio square. See SO answer:
+            # http://stackoverflow.com/questions/13685386
+            max_range = np.array([X.max()-X.min(),
+                                  Y.max()-Y.min(),
+                                  Z.max()-Z.min()]).max() / 2.0
+
+            mean_x = X.mean()
+            mean_y = Y.mean()
+            mean_z = Z.mean()
+            ax.set_xlim(mean_x - max_range, mean_x + max_range)
+            ax.set_ylim(mean_y - max_range, mean_y + max_range)
+            ax.set_zlim(mean_z - max_range, mean_z + max_range)
+
             plt.show()
         elif backend == 'mayavi':
             from mayavi import mlab
