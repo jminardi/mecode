@@ -74,7 +74,7 @@ class TestG(unittest.TestCase):
 
     def test_feed(self):
         self.g.feed(10)
-        self.expect_cmd('F10')
+        self.expect_cmd('G1 F10')
         self.assert_output()
 
     def test_dwell(self):
