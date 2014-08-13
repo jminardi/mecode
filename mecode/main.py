@@ -380,7 +380,7 @@ class G(object):
             )
         if radius == 'auto':
             radius = dist / 2.0
-        elif radius < dist / 2.0:
+        elif abs(radius) < dist / 2.0:
             msg = 'Radius {} to small for distance {}'.format(radius, dist)
             raise RuntimeError(msg)
 
