@@ -122,6 +122,17 @@ class G(object):
             If True, a flow calculation will be done in the move command. The 
             neccesary length of filament to be pushed through on a move command
             will be tagged on as a kwarg. ex. X5 Y5 E3
+        mix : True or false (default: False)
+            If true, the move command will automatically be supplemented with an
+            angular position argument ('W'). This pertains to rotation of an active
+            mixing head.
+        angular_velocity : float
+            This can be used to set the angular velocity of the active mixing head.
+            What ever units you choose (rad/s or deg/sec) will end up deciding whether
+            the mixer position is given in deg or rad.
+        mixing_multiplier: Float
+            Multiplies the calculated mixing position by this number
+            before outputting it.
         filament_diameter: float (default 1.75)
             the diameter of FDM filament you are using
         layer_height : float
