@@ -83,7 +83,8 @@ class G(object):
                  direct_write=False, printer_host='localhost',
                  printer_port=8000, two_way_comm=True, extrude = False, 
                  filament_diameter = 1.75, layer_height = 0.22, 
-                 extrusion_width = 0.4, extrusion_multiplier = 1):
+                 extrusion_width = 0.4, extrusion_multiplier = 1, mix = False,
+                 angular_velocity = 600, mixing_multiplier = 1):
         """
         Parameters
         ----------
@@ -152,6 +153,9 @@ class G(object):
         self.is_relative = True
                 
         self.extrude = extrude
+        self.mix = mix
+        self.angular_velocity = angular_velocity
+        self.mixing_multiplier = mixing_multiplier
         self.filament_diameter = filament_diameter
         self.layer_height = layer_height
         self.extrusion_width = extrusion_width
@@ -331,10 +335,8 @@ UR
                 kwargs[cal_axis] += delta
             else:
                 kwargs[cal_axis] = delta
-                
-        if self.extrude is True:
-            area = self.layer_height*(self.extrusion_width-self.layer_height) + 3.14159*(self.layer_height/2)**2
-            
+        if self.mix is True:
+            print_vel = self.speed
             if self.is_relative is not True:
                 if x is None:
                     x_move=self.current_position['x']
@@ -348,7 +350,7 @@ UR
                 current_y_pos = self.current_position['y']
                 x_distance = abs(x_move-current_x_pos)
                 y_distance = abs(y_move-current_y_pos)
-                current_extruder_position = self.current_position['E']
+                current_mixer_position = self.current_position['W']
             else:
                 if x is None:
                     x_distance=0
@@ -358,13 +360,14 @@ UR
                     y_distance=0
                 else:
                     y_distance = y
-                current_extruder_position = 0
+                current_mixer_position = 0
             line_length = math.sqrt(x_distance**2 + y_distance**2)
-            volume = line_length*area
-            filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier    
+            move_time = line_length/print_vel
+            mixer_movement = (self.angular_velocity*move_time)*self.mixing_multiplier 
+                
             
-        if self.extrude is True:
-            kwargs['E'] = filament_length + current_extruder_position
+        if self.mix is True:
+            kwargs['W'] = mixer_movement + current_mixer_position
             
         self._update_current_position(x=x, y=y, **kwargs)
         
