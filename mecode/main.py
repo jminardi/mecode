@@ -487,15 +487,10 @@ class G(object):
             The height of the rectangle in the y dimension.
         spacing : float
             The space between parallel meander lines.
-        extrusion_width : float
-            The extrusion width used to inset the triangular meanderings.
-        print_feed : float
-            The feedrate for printing moves in mm/s.
-        travel_feed : float
-            The feedrate for travel moves in mm/s.
         start : str (either 'LL', 'UL', 'LR', 'UR') (default: 'LL')
             The start of the meander -  L/U = lower/upper, L/R = left/right
             This assumes an origin in the lower left.
+        orientation : str ('x' or 'y') (default: 'x')
 
         Examples
         --------
@@ -557,10 +552,15 @@ class G(object):
             The heigh of the rectangle in the y dimension.
         spacing : float
             The space between parallel meander lines.
+        extrusion_width : float
+            The extrusion width used to inset the triangular meanderings.
+        print_feed : float
+            The feedrate for printing moves in mm/s.
+        travel_feed : float
+            The feedrate for travel moves in mm/s.
         start : str (either 'LL', 'UL', 'LR', 'UR') (default: 'LL')
             The start of the meander -  L/U = lower/upper, L/R = left/right
             This assumes an origin in the lower left.
-        orientation : str ('x' or 'y') (default: 'x')
 
         Examples
         --------
