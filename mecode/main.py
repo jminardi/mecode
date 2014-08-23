@@ -513,12 +513,12 @@ class G(object):
             x, y = -x, y
 
         # Major axis is the parallel lines, minor axis is the jog.
-        #if orientation == 'x':
-        major, major_name = x, 'x'
-        minor, minor_name = y, 'y'
-        #else:
-        #    major, major_name = y, 'y'
-        #    minor, minor_name = x, 'x'
+        if orientation == 'x':
+            major, major_name = x, 'x'
+            minor, minor_name = y, 'y'
+        else:
+            major, major_name = y, 'y'
+            minor, minor_name = x, 'x'
 
         if minor > 0:
             passes = math.ceil(minor / spacing)
