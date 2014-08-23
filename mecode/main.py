@@ -530,13 +530,22 @@ class G(object):
             self.write(msg.format(spacing, actual_spacing))
         spacing = actual_spacing
         sign = 1
-        self.relative()
+
+        was_absolute = True
+        if not self.is_relative:
+            self.relative()
+        else:
+            was_absolute = False
+
         for _ in range(int(passes)):
             self.move(**{major_name: (sign * major)})
             self.move(**{minor_name: spacing})
             sign = -1 * sign
         if tail is False:
             self.move(**{major_name: (sign * major)})
+
+        if was_absolute:
+            self.absolute()
 
     def triangular_meander(self, x, y, spacing, extrusion_width=0.0,
                            print_feed=0.0, travel_feed=0.0, start='LL'):
@@ -585,13 +594,8 @@ class G(object):
         elif start.upper() == 'LR':
             x, y = -x, y
 
-        # Major axis is the parallel lines, minor axis is the jog.
-        if orientation == 'x':
-            major, major_name = x, 'x'
-            minor, minor_name = y, 'y'
-        else:
-            major, major_name = y, 'y'
-            minor, minor_name = x, 'x'
+        major, major_name = x, 'x'
+        minor, minor_name = y, 'y'
 
         if minor > 0:
             passes = math.ceil(minor / spacing)
@@ -618,7 +622,12 @@ class G(object):
         scan_dir = 1
         zigzag_dir = 1
 
-        self.relative()
+        was_absolute = True
+        if not self.is_relative:
+            self.relative()
+        else:
+            was_absolute = False
+
         if print_feed > 0.0:
             self.feed(print_feed)
 
@@ -673,6 +682,9 @@ class G(object):
             self.move(**{minor_name: (zigzag_dir * extrusion_width*2)})
             if print_feed > 0.0:
                 self.feed(print_feed)
+
+        if was_absolute:
+            self.absolute()
 
     def clip(self, axis='z', direction='+x', height=4):
         """ Move the given axis up to the given height while arcing in the
