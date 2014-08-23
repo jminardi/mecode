@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import os.path
 import unittest
 from tempfile import TemporaryFile
