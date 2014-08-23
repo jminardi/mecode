@@ -549,7 +549,7 @@ class G(object):
         x : float
             The width of the rectangle in the x dimension.
         y : float
-            The heigh of the rectangle in the y dimension.
+            The height of the rectangle in the y dimension.
         spacing : float
             The space between parallel meander lines.
         extrusion_width : float
