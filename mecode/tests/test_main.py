@@ -378,8 +378,12 @@ class TestG(unittest.TestCase):
         self.assert_output()
         self.assert_position({'x': 0, 'y': 4, 'z': 0})
 
+        # test we return to absolute
+        self.g.absolute()
         self.g.meander(3, 2, 1, start='LR', orientation='y')
         self.expect_cmd("""
+        G90
+        G91
         G1 Y2.000000
         G1 X-1.000000
         G1 Y-2.000000
@@ -387,6 +391,7 @@ class TestG(unittest.TestCase):
         G1 Y2.000000
         G1 X-1.000000
         G1 Y-2.000000
+        G90
         """)
         self.assert_output()
         self.assert_position({'x': -3, 'y': 4, 'z': 0})
