@@ -484,7 +484,7 @@ class G(object):
         x : float
             The width of the rectangle in the x dimension.
         y : float
-            The heigh of the rectangle in the y dimension.
+            The height of the rectangle in the y dimension.
         spacing : float
             The space between parallel meander lines.
         start : str (either 'LL', 'UL', 'LR', 'UR') (default: 'LL')
@@ -530,13 +530,22 @@ class G(object):
             self.write(msg.format(spacing, actual_spacing))
         spacing = actual_spacing
         sign = 1
-        self.relative()
+
+        was_absolute = True
+        if not self.is_relative:
+            self.relative()
+        else:
+            was_absolute = False
+
         for _ in range(int(passes)):
             self.move(**{major_name: (sign * major)})
             self.move(**{minor_name: spacing})
             sign = -1 * sign
         if tail is False:
             self.move(**{major_name: (sign * major)})
+
+        if was_absolute:
+            self.absolute()
 
     def clip(self, axis='z', direction='+x', height=4):
         """ Move the given axis up to the given height while arcing in the
