@@ -589,6 +589,68 @@ class G(object):
         }
         self.arc(**kwargs)
 
+    def triangular_wave(self, x, y, cycles, start='UR', orientation='x'):
+        """ Perform a triangular wave.
+
+        Parameters
+        ----------
+        x : float
+            The length to move in x in one half cycle
+        y : float
+            The length to move in y in one half cycle
+        start : str (either 'LL', 'UL', 'LR', 'UR') (default: 'UR')
+            The start of the zigzag direction.
+            This assumes an origin in the lower left, and move toward upper
+            right.
+        orientation : str ('x' or 'y') (default: 'x')
+
+        Examples
+        --------
+        >>> # triangular wave for one cycle going 10 in x and 10 in y per half
+        >>> # cycle.
+        >>> # the lower left.
+        >>> g.zigzag(10, 10, 1)
+
+        >>> # triangular wave 4 cycles, going 3 in x and 5 in y per half cycle,
+        >>> # oscillating along the y axis.
+        >>> g.zigzag(3, 5, 4, orientation='y')
+
+        >>> # triangular wave 2 cycles, going 10 in x and 5 in y per half cycle,
+        >>> # oscillating along the x axis making the first half cycle towards
+        >>> # the lower left corner of the movement area.
+        >>> g.zigzag(10, 5, 2, start='LL')
+
+        """
+        if start.upper() == 'UL':
+            x, y = -x, y
+        elif start.upper() == 'LL':
+            x, y = -x, -y
+        elif start.upper() == 'LR':
+            x, y = x, -y
+
+        # Major axis is the parallel lines, minor axis is the jog.
+        if orientation == 'x':
+            major, major_name = x, 'x'
+            minor, minor_name = y, 'y'
+        else:
+            major, major_name = y, 'y'
+            minor, minor_name = x, 'x'
+
+        sign = 1
+
+        was_absolute = True
+        if not self.is_relative:
+            self.relative()
+        else:
+            was_absolute = False
+
+        for _ in range(int(cycles*2)):
+            self.move(**{minor_name: (sign * minor), major_name: major})
+            sign = -1 * sign
+
+        if was_absolute:
+            self.absolute()
+
     # AeroTech Specific Functions  ############################################
 
     def get_axis_pos(self, axis):

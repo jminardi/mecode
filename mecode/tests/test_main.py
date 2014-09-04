@@ -504,6 +504,66 @@ class TestG(unittest.TestCase):
         self.assertEqual(self.g.meander_passes(11, 1.5), 8)
         self.assertEqual(self.g.meander_spacing(1, 0.11), 0.1)
 
+
+    def test_triangular_wave(self):
+        self.g.triangular_wave(2, 2, 1)
+        self.expect_cmd("""
+        G1 X2.000000 Y2.000000
+        G1 X2.000000 Y-2.000000
+        """)
+        self.assert_output()
+        self.assert_position({'x': 4, 'y': 0, 'z': 0})
+
+        self.g.triangular_wave(1, 2, 2.5, orientation='y')
+        self.expect_cmd("""
+        G1 X1.000000 Y2.000000
+        G1 X-1.000000 Y2.000000
+        G1 X1.000000 Y2.000000
+        G1 X-1.000000 Y2.000000
+        G1 X1.000000 Y2.000000
+        """)
+        self.assert_output()
+        self.assert_position({'x': 5, 'y': 10, 'z': 0})
+
+        self.g.triangular_wave(2, 2, 1.5, start='UL')
+        self.expect_cmd("""
+        G1 X-2.000000 Y2.000000
+        G1 X-2.000000 Y-2.000000
+        G1 X-2.000000 Y2.000000
+        """)
+        self.assert_output()
+        self.assert_position({'x': -1, 'y': 12, 'z': 0})
+
+        self.g.triangular_wave(2, 2, 1, start='LR')
+        self.expect_cmd("""
+        G1 X2.000000 Y-2.000000
+        G1 X2.000000 Y2.000000
+        """)
+        self.assert_output()
+        self.assert_position({'x': 3, 'y': 12, 'z': 0})
+
+        self.g.triangular_wave(2, 2, 1, start='LR', orientation='y')
+        self.expect_cmd("""
+        G1 X2.000000 Y-2.000000
+        G1 X-2.000000 Y-2.000000
+        """)
+        self.assert_output()
+        self.assert_position({'x': 3, 'y': 8, 'z': 0})
+
+        # test we return to absolute
+        self.g.absolute()
+        self.g.triangular_wave(3, 2, 1, start='LR', orientation='y')
+        self.expect_cmd("""
+        G90
+        G91
+        G1 X3.000000 Y-2.000000
+        G1 X-3.000000 Y-2.000000
+        G90
+        """)
+        self.assert_output()
+        self.assert_position({'x': 3, 'y': 4, 'z': 0})
+
+
     # helper functions  #######################################################
 
     def expect_cmd(self, cmd):
