@@ -474,6 +474,16 @@ class G(object):
                 self.move(y=-y)
                 self.move(x=x)
 
+    def meander_passes(self, minor, spacing):
+        if minor > 0:
+            passes = math.ceil(minor / spacing)
+        else:
+            passes = abs(math.floor(minor / spacing))
+        return passes
+
+    def meander_spacing(self, minor, spacing):
+        return minor / self.meander_passes(minor, spacing)
+
     def meander(self, x, y, spacing, start='LL', orientation='x', tail=False):
         """ Infill a rectangle with a square wave meandering pattern. If the
         relevant dimension is not a multiple of the spacing, the spacing will
@@ -520,11 +530,7 @@ class G(object):
             major, major_name = y, 'y'
             minor, minor_name = x, 'x'
 
-        if minor > 0:
-            passes = math.ceil(minor / spacing)
-        else:
-            passes = abs(math.floor(minor / spacing))
-        actual_spacing = minor / passes
+        actual_spacing = self.meander_spacing(minor, spacing)
         if abs(actual_spacing) != spacing:
             msg = ';WARNING! meander spacing updated from {} to {}'
             self.write(msg.format(spacing, actual_spacing))
@@ -537,7 +543,7 @@ class G(object):
         else:
             was_absolute = False
 
-        for _ in range(int(passes)):
+        for _ in range(int(self.meander_passes(minor, spacing))):
             self.move(**{major_name: (sign * major)})
             self.move(**{minor_name: spacing})
             sign = -1 * sign
