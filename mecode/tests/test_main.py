@@ -15,12 +15,13 @@ except:
     sys.path.append(abspath(os.path.join(HERE, '..', '..')))
     from mecode import G, is_str, decode2To3
 
-
-class TestG(unittest.TestCase):
+class TestGFixture(unittest.TestCase):
+    def getGClass(self):
+        return G
 
     def setUp(self):
         self.outfile = TemporaryFile()
-        self.g = G(outfile=self.outfile, print_lines=False,
+        self.g = self.getGClass()(outfile=self.outfile, print_lines=False,
                    aerotech_include=False)
         self.expected = ""
         if self.g.is_relative:
@@ -32,6 +33,32 @@ class TestG(unittest.TestCase):
         self.g.teardown()
         del self.outfile
         del self.g
+
+    # helper functions  #######################################################
+
+    def expect_cmd(self, cmd):
+        self.expected = self.expected + cmd + '\n'
+
+    def assert_output(self):
+        string_rep = ""
+        if is_str(self.expected):
+            string_rep = self.expected
+            self.expected = self.expected.split('\n')
+        self.expected = [x.strip() for x in self.expected if x.strip()]
+        self.outfile.seek(0)
+        lines = self.outfile.readlines()
+        lines = [decode2To3(x).strip() for x in lines if x.strip()]
+        self.assertListEqual(lines, self.expected)
+        self.expected = string_rep
+
+    def assert_almost_position(self, expected_pos):
+        for k, v in expected_pos.items():
+            self.assertAlmostEqual(self.g.current_position[k], v)
+
+    def assert_position(self, expected_pos):
+        self.assertEqual(self.g.current_position, expected_pos)
+
+class TestG(TestGFixture):
 
     def test_init(self):
         self.assertEqual(self.g.is_relative, True)
@@ -562,27 +589,6 @@ class TestG(unittest.TestCase):
         """)
         self.assert_output()
         self.assert_position({'x': 3, 'y': 4, 'z': 0})
-
-
-    # helper functions  #######################################################
-
-    def expect_cmd(self, cmd):
-        self.expected = self.expected + cmd + '\n'
-
-    def assert_output(self):
-        string_rep = ""
-        if is_str(self.expected):
-            string_rep = self.expected
-            self.expected = self.expected.split('\n')
-        self.expected = [x.strip() for x in self.expected if x.strip()]
-        self.outfile.seek(0)
-        lines = self.outfile.readlines()
-        lines = [decode2To3(x).strip() for x in lines if x.strip()]
-        self.assertListEqual(lines, self.expected)
-        self.expected = string_rep
-
-    def assert_position(self, expected_pos):
-        self.assertEqual(self.g.current_position, expected_pos)
 
 
 if __name__ == '__main__':
