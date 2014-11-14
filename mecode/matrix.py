@@ -36,6 +36,18 @@ class GMatrix(G):
     def __init__(self, *args, **kwargs):
         super(GMatrix, self).__init__(*args, **kwargs)
         self._matrix_setup()
+        self.position_savepoints = []
+        
+    # Position savepoints #####################################################        
+    def save_position(self):
+        self.position_savepoints.append((self.current_position["x"],
+                                         self.current_position["y"],
+                                         self.current_position["z"]))
+
+    def restore_position(self):
+        return_position = self.position_savepoints.pop()
+        self.abs_move(return_position[0], return_position[1], return_position[2])
+
 
     # Matrix manipulation #####################################################        
     def _matrix_setup(self):
