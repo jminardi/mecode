@@ -99,6 +99,8 @@ class TestGMatrix(TestGFixture):
         self.g.move(-1, 0)
         self.g.pop_matrix()
         self.assert_almost_position({'x':0, 'y':0, 'z':0})
+        self.g.move(0,0,-1)
+        self.assert_almost_position({'x':0, 'y':0, 'z':-1})
 
     def test_matrix_math(self):
         self.assertAlmostEqual(self.g._matrix_transform_length(2), 2.0)

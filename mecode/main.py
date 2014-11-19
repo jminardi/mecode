@@ -814,7 +814,7 @@ class G(object):
             if y is not None:
                 self._current_position['y'] += y
             if z is not None:
-                self.current_position['z'] += z
+                self._current_position['z'] += z
             for dimention, delta in kwargs.items():
                 self._current_position[dimention] += delta
         else:
