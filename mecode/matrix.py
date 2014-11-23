@@ -79,8 +79,8 @@ class GMatrix(G):
         "Transform an x,y,z coordinate by our transformation matrix."
         matrix = self.matrix_stack[-1]
 
-        if x is None: x = 0.0
-        if y is None: y = 0.0
+        if x is None: x = 0
+        if y is None: y = 0
 
         transform = matrix * np.matrix([x, y]).T
         
@@ -89,6 +89,13 @@ class GMatrix(G):
     def _matrix_transform_length(self, length):
         (x,y,z) = self._matrix_transform(length, 0, 0)
         return math.sqrt(x**2 + y**2 + z**2)
+
+    def abs_move(self, x=None, y=None, z=None, **kwargs):
+        if x is None: x = self.current_position['x']
+        if y is None: y = self.current_position['y']
+        if z is None: z = self.current_position['z']
+        (x,y,z) = self._matrix_transform(x,y,z)
+        super(GMatrix, self).abs_move(x,y,z, **kwargs)
 
     def move(self, x=None, y=None, z=None, **kwargs):
         (x,y,z) = self._matrix_transform(x,y,z)
