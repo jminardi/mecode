@@ -138,7 +138,7 @@ class G(object):
         self.y_axis = y_axis
         self.z_axis = z_axis
 
-        self.current_position = defaultdict(float)
+        self._current_position = defaultdict(float)
         self.is_relative = True
 
         self.position_history = [(0, 0, 0)]
@@ -148,6 +148,10 @@ class G(object):
         self._socket = None
 
         self.setup()
+
+    @property
+    def current_position(self):
+        return self._current_position
 
     def __enter__(self):
         """
@@ -374,7 +378,7 @@ class G(object):
             dist = math.sqrt(values[0] ** 2 + values[1] ** 2)
         else:
             k = [ky for ky in dims.keys()]
-            cp = self.current_position
+            cp = self._current_position
             dist = math.sqrt(
                 (cp[k[0]] - values[0]) ** 2 + (cp[k[1]] - values[1]) ** 2
             )
@@ -806,26 +810,27 @@ class G(object):
 
         if mode == 'relative':
             if x is not None:
-                self.current_position['x'] += x
+                self._current_position['x'] += x
             if y is not None:
-                self.current_position['y'] += y
+                self._current_position['y'] += y
             if z is not None:
-                self.current_position['z'] += z
+                self._current_position['z'] += z
             for dimention, delta in kwargs.items():
-                self.current_position[dimention] += delta
+                self._current_position[dimention] += delta
         else:
             if x is not None:
-                self.current_position['x'] = x
+                self._current_position['x'] = x
             if y is not None:
-                self.current_position['y'] = y
+                self._current_position['y'] = y
             if z is not None:
-                self.current_position['z'] = z
+                self._current_position['z'] = z
             for dimention, delta in kwargs.items():
-                self.current_position[dimention] = delta
+                self._current_position[dimention] = delta
 
-        x = self.current_position['x']
-        y = self.current_position['y']
-        z = self.current_position['z']
+        x = self._current_position['x']
+        y = self._current_position['y']
+        z = self._current_position['z']
+        
         self.position_history.append((x, y, z))
 
         len_history = len(self.position_history)
