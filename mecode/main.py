@@ -47,6 +47,7 @@ This software was developed by the Lewis Lab at Harvard University.
 
 import math
 import os
+import time
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -80,8 +81,9 @@ class G(object):
 
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
                  aerotech_include=True, direct_write=False,
-                 printer_host='localhost', printer_port=8000,
-                 two_way_comm=True, x_axis='X', y_axis='Y', z_axis='Z'):
+                 direct_write_mode='socket', printer_host='localhost',
+                 printer_port=8000, baudrate=250000, two_way_comm=True,
+                 x_axis='X', y_axis='Y', z_axis='Z'):
         """
         Parameters
         ----------
@@ -99,12 +101,17 @@ class G(object):
         aerotech_include : bool (default: True)
             If true, add aerotech specific functions and var defs to outfile.
         direct_write : bool (default: False)
-            If True a socket is opened to the printer and the GCode is sent
-            directly over.
+            If True a socket or serial port is opened to the printer and the
+            GCode is sent directly over.
+        direct_write_mode : str (either 'socket' or 'serial') (default: socket)
+            Specify the channel your printer communicates over, only used if
+            `direct_write` is True.
         printer_host : str (default: 'localhost')
             Hostname of the printer, only used if `direct_write` is True.
         printer_port : int (default: 8000)
             Port of the printer, only used if `direct_write` is True.
+        baudrate: int (default: 250000)
+            The baudrate to connect to the printer with.
         two_way_comm : bool (default: True)
             If True, mecode waits for a response after every line of GCode is
             sent over the socket. The response is returned by the `write`
@@ -131,8 +138,10 @@ class G(object):
         self.footer = footer
         self.aerotech_include = aerotech_include
         self.direct_write = direct_write
+        self.direct_write_mode = direct_write_mode
         self.printer_host = printer_host
         self.printer_port = printer_port
+        self.baudrate = baudrate
         self.two_way_comm = two_way_comm
         self.x_axis = x_axis
         self.y_axis = y_axis
@@ -146,6 +155,7 @@ class G(object):
         self.speed_history = []
 
         self._socket = None
+        self._s  = None
 
         self.setup()
 
@@ -734,18 +744,32 @@ class G(object):
         if self.out_fd is not None:
             self.out_fd.write(statement)
         if self.direct_write is True:
-            if self._socket is None:
-                import socket
-                self._socket = socket.socket(socket.AF_INET,
-                                             socket.SOCK_STREAM)
-                self._socket.connect((self.printer_host, self.printer_port))
-            self._socket.send(statement)
-            if self.two_way_comm is True:
-                response = self._socket.recv(8192)
-                response = decode2To3(response)
-                if response[0] != '%':
-                    raise RuntimeError(response)
-                return response[1:-1]
+            if self.direct_write_mode == 'socket':
+                if self._socket is None:
+                    import socket
+                    self._socket = socket.socket(socket.AF_INET,
+                                                socket.SOCK_STREAM)
+                    self._socket.connect((self.printer_host, self.printer_port))
+                self._socket.send(statement)
+                if self.two_way_comm is True:
+                    response = self._socket.recv(8192)
+                    response = decode2To3(response)
+                    if response[0] != '%':
+                        raise RuntimeError(response)
+                    return response[1:-1]
+            elif self.direct_write_mode == 'serial':
+                if self._s is None:
+                    import serial
+                    self._s = serial.Serial(self.printer_port, self.baudrate, timeout=1)
+                    # read all the intro messages
+                    x = True
+                    while x:
+                        x = self._s.readline()
+                        time.sleep(0.01)
+                self._s.write(statement.strip() + '\n')
+                response = self._s.readline()
+                if 'ok' not in response:
+                    raise RuntimeError('Communication Error: ' + response)
 
     def rename_axis(self, x=None, y=None, z=None):
         """ Replaces the x, y, or z axis with the given name.
