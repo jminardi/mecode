@@ -488,16 +488,6 @@ class G(object):
                 self.move(y=-y)
                 self.move(x=x)
 
-    def meander_passes(self, minor, spacing):
-        if minor > 0:
-            passes = math.ceil(minor / spacing)
-        else:
-            passes = abs(math.floor(minor / spacing))
-        return passes
-
-    def meander_spacing(self, minor, spacing):
-        return minor / self.meander_passes(minor, spacing)
-
     def meander(self, x, y, spacing, start='LL', orientation='x', tail=False):
         """ Infill a rectangle with a square wave meandering pattern. If the
         relevant dimension is not a multiple of the spacing, the spacing will
@@ -544,7 +534,7 @@ class G(object):
             major, major_name = y, 'y'
             minor, minor_name = x, 'x'
 
-        actual_spacing = self.meander_spacing(minor, spacing)
+        actual_spacing = self._meander_spacing(minor, spacing)
         if abs(actual_spacing) != spacing:
             msg = ';WARNING! meander spacing updated from {} to {}'
             self.write(msg.format(spacing, actual_spacing))
@@ -557,7 +547,7 @@ class G(object):
         else:
             was_absolute = False
 
-        for _ in range(int(self.meander_passes(minor, spacing))):
+        for _ in range(int(self._meander_passes(minor, spacing))):
             self.move(**{major_name: (sign * major)})
             self.move(**{minor_name: spacing})
             sign = -1 * sign
@@ -790,6 +780,17 @@ class G(object):
             raise RuntimeError(msg)
 
     # Private Interface  ######################################################
+
+    def _meander_passes(self, minor, spacing):
+        if minor > 0:
+            passes = math.ceil(minor / spacing)
+        else:
+            passes = abs(math.floor(minor / spacing))
+        return passes
+
+    def _meander_spacing(self, minor, spacing):
+        return minor / self._meander_passes(minor, spacing)
+
     def _write_header(self):
         outfile = self.outfile
         if outfile is not None or self.out_fd is not None:
@@ -854,7 +855,7 @@ class G(object):
         x = self._current_position['x']
         y = self._current_position['y']
         z = self._current_position['z']
-        
+
         self.position_history.append((x, y, z))
 
         len_history = len(self.position_history)
