@@ -526,10 +526,10 @@ class TestG(TestGFixture):
         self.assert_output()
 
     def test_meander_helpers(self):
-        self.assertEqual(self.g.meander_spacing(12, 1.5), 1.5)
-        self.assertEqual(self.g.meander_spacing(10, 2.2), 2)
-        self.assertEqual(self.g.meander_passes(11, 1.5), 8)
-        self.assertEqual(self.g.meander_spacing(1, 0.11), 0.1)
+        self.assertEqual(self.g._meander_spacing(12, 1.5), 1.5)
+        self.assertEqual(self.g._meander_spacing(10, 2.2), 2)
+        self.assertEqual(self.g._meander_passes(11, 1.5), 8)
+        self.assertEqual(self.g._meander_spacing(1, 0.11), 0.1)
 
 
     def test_triangular_wave(self):
