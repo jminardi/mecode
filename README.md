@@ -44,14 +44,36 @@ with G(outfile='file.gcode') as g:
 
 When the `with` block is exited, `g.teardown()` will be automatically called.
 
-The resulting toolpath can be visualized in 3D using the `mayavi` package with
-the `view()` method:
+The resulting toolpath can be visualized in 3D using the `mayavi` or `matplotlib`
+package with the `view()` method:
 
 ```python
 g = G()
 g.meander(10, 10, 1)
 g.view()
 ```
+
+The graphics backend can be specified when calling the `view()` method, e.g. `g.view('matplotlib')`.
+`mayavi` is the default graphics backend.
+
+All GCode Methods
+-----------------
+
+All methods have detailed docstrings and examples.
+
+* `set_home()`
+* `reset_home()`
+* `feed()`
+* `dwell()`
+* `home()`
+* `move()`
+* `abs_move()`
+* `arc()`
+* `abs_arc()`
+* `rect()`
+* `meander()`
+* `clip()`
+* `triangular_wave()`
 
 Matrix Transforms
 -----------------
@@ -71,6 +93,14 @@ g.pop_matrix()       # revert to the prior transformation matrix.
 
 The transformation matrix is 2D instead of 3D to simplify arc support.
 
+Renaming Axes
+-------------
+
+When working with a machine that has more than one Z-Axis, it is
+useful to use the `rename_axis()` function. That way your code can
+always refer to the verticle axis as 'Z', but you can dynamically
+rename it.
+
 Installation
 ------------
 ```bash
@@ -82,15 +112,12 @@ $ python setup.py install
 Optional Dependencies
 ---------------------
 The following dependencies are optional, and are only needed for
-interpolation and visualization. An easy way to install them is to use
+visualization. An easy way to install them is to use
 [Canopy][0] or [conda][1].
 
 * numpy
-    + numpy is needed for interpolation and visualization
-* scipy
-    + scipy is used for interpolation
 * mayavi
-    + mayavi is used for visualization
+* matplotlib
 
 [0]: https://www.enthought.com/products/canopy/
 [1]: https://store.continuum.io/cshop/anaconda/
