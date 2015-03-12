@@ -193,9 +193,10 @@ class G(object):
 
         """
         args = self._format_args(x, y, z, **kwargs)
-        self.write('G92 ' + args)
+        val = self.write('G92 ' + args)
 
         self._update_current_position(mode='absolute', x=x, y=y, z=z, **kwargs)
+        return val
 
     def reset_home(self):
         """ Reset the position back to machine coordinates without moving.
@@ -211,8 +212,9 @@ class G(object):
 
         """
         if not self.is_relative:
-            self.write('G91')
+            val = self.write('G91')
             self.is_relative = True
+            return val
 
     def absolute(self):
         """ Enter absolute movement mode, in general this method should not be
@@ -220,8 +222,9 @@ class G(object):
 
         """
         if self.is_relative:
-            self.write('G90')
+            val = self.write('G90')
             self.is_relative = False
+            return val
 
     def feed(self, rate):
         """ Set the feed rate (tool head speed) in mm/s
@@ -232,8 +235,9 @@ class G(object):
             The speed to move the tool head in mm/s.
 
         """
-        self.write('G1 F{}'.format(rate))
+        val = self.write('G1 F{}'.format(rate))
         self.speed = rate
+        return val
 
     def dwell(self, time):
         """ Pause code executions for the given amount of time.
@@ -244,7 +248,7 @@ class G(object):
             Time in seconds to pause code execution.
 
         """
-        self.write('G4 P{}'.format(time))
+        return self.write('G4 P{}'.format(time))
 
     # Composed Functions  #####################################################
 
@@ -255,9 +259,9 @@ class G(object):
         """
         self._write_header()
         if self.is_relative:
-            self.write('G91')
+            return self.write('G91')
         else:
-            self.write('G90')
+            return self.write('G90')
 
     def teardown(self):
         """ Close the outfile file after writing the footer if opened. This
@@ -305,7 +309,7 @@ class G(object):
         self._update_current_position(x=x, y=y, z=z, **kwargs)
 
         args = self._format_args(x, y, z, **kwargs)
-        self.write('G1 ' + args)
+        return self.write('G1 ' + args)
 
     def abs_move(self, x=None, y=None, z=None, **kwargs):
         """ Same as `move` method, but positions are interpreted as absolute.
@@ -398,18 +402,22 @@ class G(object):
             msg = 'Radius {} to small for distance {}'.format(radius, dist)
             raise RuntimeError(msg)
 
+        to_write = []
         if axis is not None:
-            self.write('G16 X Y {}'.format(axis))  # coordinate axis assignment
-        self.write(plane_selector)
+            to_write.append('G16 X Y {}'.format(axis))  # coordinate axis assignment
+        to_write.append(plane_selector)
         args = self._format_args(**dims)
         if helix_dim is None:
-            self.write('{0} {1} R{2:f}'.format(command, args, radius))
+            to_write.append('{0} {1} R{2:f}'.format(command, args, radius))
         else:
-            self.write('{0} {1} R{2:f} G1 {3}{4}'.format(command, args, radius,
+            to_write.appnd('{0} {1} R{2:f} G1 {3}{4}'.format(command, args, radius,
                                                   helix_dim.upper(), helix_len))
             dims[helix_dim] = helix_len
 
         self._update_current_position(**dims)
+        for line in to_write:
+            self.write(line)
+        return to_write
 
     def abs_arc(self, direction='CW', radius='auto', **kwargs):
         """ Same as `arc` method, but positions are interpreted as absolute.
@@ -673,16 +681,16 @@ class G(object):
             The path specifying the aerotech calibration file.
 
         """
-        self.write(r'LOADCALFILE "{}", 2D_CAL'.format(path))
+        return self.write(r'LOADCALFILE "{}", 2D_CAL'.format(path))
 
     def toggle_pressure(self, com_port):
-        self.write('Call togglePress P{}'.format(com_port))
+        return self.write('Call togglePress P{}'.format(com_port))
 
     def set_pressure(self, com_port, value):
-        self.write('Call setPress P{} Q{}'.format(com_port, value))
+        return self.write('Call setPress P{} Q{}'.format(com_port, value))
 
     def set_valve(self, num, value):
-        self.write('$DO{}.0={}'.format(num, value))
+        return self.write('$DO{}.0={}'.format(num, value))
 
     # Public Interface  #######################################################
 
@@ -760,6 +768,7 @@ class G(object):
                 response = self._s.readline()
                 if 'ok' not in response:
                     raise RuntimeError('Communication Error: ' + response)
+        return statement
 
     def rename_axis(self, x=None, y=None, z=None):
         """ Replaces the x, y, or z axis with the given name.
