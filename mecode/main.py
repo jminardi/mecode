@@ -83,7 +83,9 @@ class G(object):
                  aerotech_include=True, direct_write=False,
                  direct_write_mode='socket', printer_host='localhost',
                  printer_port=8000, baudrate=250000, two_way_comm=True,
-                 x_axis='X', y_axis='Y', z_axis='Z'):
+                 x_axis='X', y_axis='Y', z_axis='Z', extrude=False,
+                 filament_diameter=1.75, layer_height=0.19,
+                 extrusion_width=0.35, extrusion_multiplier=1):
         """
         Parameters
         ----------
@@ -122,6 +124,19 @@ class G(object):
             The name of the z axis (used in the exported gcode)
         z_axis : str (default 'Z')
             The name of the z axis (used in the exported gcode)
+        extrude : True or False (default: False)
+            If True, a flow calculation will be done in the move command. The
+            neccesary length of filament to be pushed through on a move command
+            will be tagged on as a kwarg. ex. X5 Y5 E3
+        filament_diameter: float (default 1.75)
+            the diameter of FDM filament you are using
+        layer_height : float
+            Layer height for FDM printing. Only relavent when extrude = True.
+        extrusion width: float
+            total width of the capsule shaped cross section of a squashed filament.
+        extrusion_multiplier: float (default = 1)
+            The length of extrusion filament to be pushed through on a move
+            command will be multiplied by this number before being applied.
 
         """
         # string file name
@@ -149,6 +164,12 @@ class G(object):
 
         self._current_position = defaultdict(float)
         self.is_relative = True
+
+        self.extrude = extrude
+        self.filament_diameter = filament_diameter
+        self.layer_height = layer_height
+        self.extrusion_width = extrusion_width
+        self.extrusion_multiplier = extrusion_multiplier
 
         self.position_history = [(0, 0, 0)]
         self.speed = 0
@@ -228,7 +249,7 @@ class G(object):
 
     def feed(self, rate):
         """ Set the feed rate (tool head speed) in mm/s
-
+UR
         Parameters
         ----------
         rate : float
@@ -306,8 +327,25 @@ class G(object):
         >>> g.move(A=20)
 
         """
-        self._update_current_position(x=x, y=y, z=z, **kwargs)
+        if self.extrude is True and 'E' not in kwargs.keys():
+            if self.is_relative is not True:
+                x_move = self.current_position['x'] if x is None else x
+                y_move = self.current_position['y'] if y is None else y
+                x_distance = abs(x_move - self.current_position['x'])
+                y_distance = abs(y_move - self.current_position['y'])
+                current_extruder_position = self.current_position['E']
+            else:
+                x_distance = 0 if x is None else x
+                y_distance = 0 if y is None else y
+                current_extruder_position = 0
+            line_length = math.sqrt(x_distance**2 + y_distance**2)
+            area = self.layer_height*(self.extrusion_width-self.layer_height) + \
+                3.14159*(self.layer_height/2)**2
+            volume = line_length*area
+            filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier
+            kwargs['E'] = filament_length + current_extruder_position
 
+        self._update_current_position(x=x, y=y, z=z, **kwargs)
         args = self._format_args(x, y, z, **kwargs)
         return self.write('G1 ' + args)
 
@@ -320,6 +358,14 @@ class G(object):
             self.relative()
         else:
             self.move(x=x, y=y, z=z, **kwargs)
+
+    def retract(self, retraction):
+        if self.extrude is False:
+            self.move(E = -retraction)
+        else:
+            self.extrude = False
+            self.move(E = -retraction)
+            self.extrude = True
 
     def arc(self, x=None, y=None, z=None, direction='CW', radius='auto',
             helix_dim=None, helix_len=0, **kwargs):
@@ -403,6 +449,27 @@ class G(object):
             raise RuntimeError(msg)
 
         to_write = []
+        #extrude feature implementation
+        # only designed for flow calculations in x-y plane
+        if self.extrude is True:
+            area = self.layer_height*(self.extrusion_width-self.layer_height) + 3.14159*(self.layer_height/2)**2
+            if self.is_relative is not True:
+                current_extruder_position = self.current_position['E']
+            else:
+                current_extruder_position = 0
+
+            circle_circumference = 2*3.14159*abs(radius)
+
+            arc_angle = ((2*math.asin(dist/(2*abs(radius))))/(2*3.14159))*360
+            shortest_arc_length = (arc_angle/180)*3.14159*abs(radius)
+            if radius > 0:
+                arc_length = shortest_arc_length
+            else:
+                arc_length = circle_circumference - shortest_arc_length
+            volume = arc_length*area
+            filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier
+            dims['E'] = filament_length + current_extruder_position
+
         if axis is not None:
             to_write.append('G16 X Y {}'.format(axis))  # coordinate axis assignment
         to_write.append(plane_selector)
@@ -410,7 +477,7 @@ class G(object):
         if helix_dim is None:
             to_write.append('{0} {1} R{2:f}'.format(command, args, radius))
         else:
-            to_write.appnd('{0} {1} R{2:f} G1 {3}{4}'.format(command, args, radius,
+            to_write.append('{0} {1} R{2:f} G1 {3}{4}'.format(command, args, radius,
                                                   helix_dim.upper(), helix_len))
             dims[helix_dim] = helix_len
 
