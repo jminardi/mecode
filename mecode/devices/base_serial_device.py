@@ -3,13 +3,15 @@ import serial
 
 class BaseSerialDevice(object):
 
-    def __init__(self, comport='COM5'):
+    def __init__(self, comport='COM5', baud=115200):
         self.comport = comport
+        self.baud = baud
         self.connect()
 
     def connect(self):
-        self.s = serial.Serial(self.comport, baudrate=115200,
-                               parity='N', stopbits=1, bytesize=8)
+        self.s = serial.Serial(self.comport, baudrate=self.baud,
+                               parity='N', stopbits=1, bytesize=8,
+                               timeout=2)
 
     def disconnect(self):
         self.s.close()

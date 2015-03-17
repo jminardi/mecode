@@ -38,20 +38,68 @@ are writing to a file. This can be accomplished automatically by using G as
 a context manager like so:
 
 ```python
-with G(output='file.gcode') as g:
+with G(outfile='file.gcode') as g:
     g.move(10)
 ```
 
 When the `with` block is exited, `g.teardown()` will be automatically called.
 
-The resulting toolpath can be visualized in 3D using the `mayavi` package with
-the `view()` method:
+The resulting toolpath can be visualized in 3D using the `mayavi` or `matplotlib`
+package with the `view()` method:
 
 ```python
 g = G()
 g.meander(10, 10, 1)
 g.view()
 ```
+
+The graphics backend can be specified when calling the `view()` method, e.g. `g.view('matplotlib')`.
+`mayavi` is the default graphics backend.
+
+All GCode Methods
+-----------------
+
+All methods have detailed docstrings and examples.
+
+* `set_home()`
+* `reset_home()`
+* `feed()`
+* `dwell()`
+* `home()`
+* `move()`
+* `abs_move()`
+* `arc()`
+* `abs_arc()`
+* `rect()`
+* `meander()`
+* `clip()`
+* `triangular_wave()`
+
+Matrix Transforms
+-----------------
+
+A wrapper class, `GMatrix` will run all move and arc commands through a 
+2D transformation matrix before forwarding them to `G`.
+
+To use, simply instantiate a `GMatrix` object instead of a `G` object:
+
+```python
+g = GMatrix()
+g.push_matrix()      # save the current transformation matrix on the stack.
+g.rotate(math.pi/2)  # rotate our transformation matrix by 90 degrees.
+g.move(0, 1)         # same as moves (1,0) before the rotate.
+g.pop_matrix()       # revert to the prior transformation matrix.
+```
+
+The transformation matrix is 2D instead of 3D to simplify arc support.
+
+Renaming Axes
+-------------
+
+When working with a machine that has more than one Z-Axis, it is
+useful to use the `rename_axis()` function. Using this function your
+code can always refer to the vertical axis as 'Z', but you can dynamically
+rename it.
 
 Installation
 ------------
@@ -64,26 +112,19 @@ $ python setup.py install
 Optional Dependencies
 ---------------------
 The following dependencies are optional, and are only needed for
-interpolation and visualization. An easy way to install them is to use
+visualization. An easy way to install them is to use
 [Canopy][0] or [conda][1].
 
 * numpy
-    + numpy is needed for interpolation and visualization
-* scipy
-    + scipy is used for interpolation
 * mayavi
-    + mayavi is used for visualization
+* matplotlib
 
 [0]: https://www.enthought.com/products/canopy/
 [1]: https://store.continuum.io/cshop/anaconda/
 
 TODO
 ----
-* split footer.txt into different files.
-* replace "z" with arbitrary axis name on the fly.
 * add pressure box comport to `__init__()` method
-* is set_valve the best name?
-* finalize interface on aerotech functions.
 * build out multi-nozzle support
     * include multi-nozzle support in view method.
 * factor out aerotech specific methods into their own class

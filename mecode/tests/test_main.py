@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import os.path
 import unittest
 from tempfile import TemporaryFile
@@ -13,12 +15,13 @@ except:
     sys.path.append(abspath(os.path.join(HERE, '..', '..')))
     from mecode import G, is_str, decode2To3
 
-
-class TestG(unittest.TestCase):
+class TestGFixture(unittest.TestCase):
+    def getGClass(self):
+        return G
 
     def setUp(self):
         self.outfile = TemporaryFile()
-        self.g = G(outfile=self.outfile, print_lines=False,
+        self.g = self.getGClass()(outfile=self.outfile, print_lines=False,
                    aerotech_include=False)
         self.expected = ""
         if self.g.is_relative:
@@ -30,6 +33,32 @@ class TestG(unittest.TestCase):
         self.g.teardown()
         del self.outfile
         del self.g
+
+    # helper functions  #######################################################
+
+    def expect_cmd(self, cmd):
+        self.expected = self.expected + cmd + '\n'
+
+    def assert_output(self):
+        string_rep = ""
+        if is_str(self.expected):
+            string_rep = self.expected
+            self.expected = self.expected.split('\n')
+        self.expected = [x.strip() for x in self.expected if x.strip()]
+        self.outfile.seek(0)
+        lines = self.outfile.readlines()
+        lines = [decode2To3(x).strip() for x in lines if x.strip()]
+        self.assertListEqual(lines, self.expected)
+        self.expected = string_rep
+
+    def assert_almost_position(self, expected_pos):
+        for k, v in expected_pos.items():
+            self.assertAlmostEqual(self.g.current_position[k], v)
+
+    def assert_position(self, expected_pos):
+        self.assertEqual(self.g.current_position, expected_pos)
+
+class TestG(TestGFixture):
 
     def test_init(self):
         self.assertEqual(self.g.is_relative, True)
@@ -105,12 +134,23 @@ class TestG(unittest.TestCase):
         self.assert_position({'x': 10.0, 'y': 10.0, 'z': 0})
         self.g.move(10, 10, A=50)
         self.assert_position({'x': 20.0, 'y': 20.0, 'A': 50, 'z': 0})
+        self.g.move(10, 10, 10)
+        self.assert_position({'x': 30.0, 'y': 30.0, 'A': 50, 'z': 10})
         self.expect_cmd("""
         G1 X10.000000 Y10.000000
         G1 X10.000000 Y10.000000 A50.000000
+        G1 X10.000000 Y10.000000 Z10.000000
         """)
         self.assert_output()
-        
+
+        self.g.abs_move(20, 20, 0)
+        self.expect_cmd("""
+        G90
+        G1 X20.000000 Y20.000000 Z0.000000
+        G91
+        """)
+        self.assert_output()
+
         #test extrusion in absolute movement
         self.g.extrude = True
         self.g.layer_height = 0.22
@@ -125,28 +165,26 @@ class TestG(unittest.TestCase):
         G1 X30.000000 Y30.000000 E0.456351
         G91
         """)
-        
-       
-        
+
         self.assert_output()
-        
+
         self.g.move(x=10)
-        self.assert_position({'x': 40.0, 'y': 30.0, 'A':50, 'z': 0, 
+        self.assert_position({'x': 40.0, 'y': 30.0, 'A':50, 'z': 0,
                         'E': 0.7790399076627088})
         self.expect_cmd("""
         G1 X10.000000 E0.322689
         """)
         self.assert_output()
-        
+
         self.g.extrusion_multiplier = 2
         self.g.move(y=10)
-        self.assert_position({'x': 40.0, 'y': 40.0, 'A':50,  'z': 0, 
+        self.assert_position({'x': 40.0, 'y': 40.0, 'A':50,  'z': 0,
                                 'E': 1.4244176984302641})
         self.expect_cmd("""
         G1 Y10.000000 E0.645378
         """)
         self.assert_output()
-        
+
         self.g.move(Z=10)
         self.assert_position({'x': 40.0, 'y': 40.0, 'A': 50, 'Z': 10, 'z':0.0,
                                 'E': 1.4244176984302641})
@@ -154,7 +192,7 @@ class TestG(unittest.TestCase):
         G1 Z10.000000 E0.000000
         """)
         self.assert_output()
-        
+
         self.g.abs_move(Z=20)
         self.assert_position({'x': 40.0, 'y': 40.0, 'Z': 20, 'A':50, 'z':0.0,
                             'E': 1.4244176984302641})
@@ -164,7 +202,7 @@ class TestG(unittest.TestCase):
         G91
         """)
         self.assert_output()
-    
+
     def test_retraction(self):
         g=self.g
         g.retract(retraction = 5)
@@ -173,7 +211,7 @@ class TestG(unittest.TestCase):
         G1 E-5.000000
         """)
         self.assert_output()
-                
+
     def test_abs_move(self):
         self.g.relative()
         self.g.abs_move(10, 10)
@@ -185,14 +223,14 @@ class TestG(unittest.TestCase):
         self.assert_output()
         self.assert_position({'x': 10, 'y': 10, 'z': 0})
 
-        self.g.abs_move(5, 5)
+        self.g.abs_move(5, 5, 5)
         self.expect_cmd("""
         G90
-        G1 X5.000000 Y5.000000
+        G1 X5.000000 Y5.000000 Z5.000000
         G91
         """)
         self.assert_output()
-        self.assert_position({'x': 5, 'y': 5, 'z': 0})
+        self.assert_position({'x': 5, 'y': 5, 'z': 5})
 
         self.g.abs_move(15, 0, D=5)
         self.expect_cmd("""
@@ -201,7 +239,7 @@ class TestG(unittest.TestCase):
         G91
         """)
         self.assert_output()
-        self.assert_position({'x': 15, 'y': 0, 'D': 5, 'z': 0})
+        self.assert_position({'x': 15, 'y': 0, 'D': 5, 'z': 5})
 
         self.g.absolute()
         self.g.abs_move(19, 18, D=6)
@@ -210,7 +248,7 @@ class TestG(unittest.TestCase):
         G1 X19.000000 Y18.000000 D6.000000
         """)
         self.assert_output()
-        self.assert_position({'x': 19, 'y': 18, 'D': 6, 'z': 0})
+        self.assert_position({'x': 19, 'y': 18, 'D': 6, 'z': 5})
         self.g.relative()
 
     def test_arc(self):
@@ -220,7 +258,7 @@ class TestG(unittest.TestCase):
         self.g.arc(x=10, y=0)
         self.expect_cmd("""
         G17
-        G2 X10 Y0 R5.0
+        G2 X10.000000 Y0.000000 R5.000000
         """)
         self.assert_output()
         self.assert_position({'x': 10, 'y': 0, 'z': 0})
@@ -229,7 +267,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G16 X Y A
         G18
-        G3 A0 X5 R5
+        G3 X5.000000 A0.000000 R5.000000
         """)
         self.assert_output()
         self.assert_position({'x': 15, 'y': 0, 'A': 0, 'z': 0})
@@ -238,10 +276,19 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G16 X Y D
         G17
-        G2 X0 Y10 R5.0 G1 D10
+        G2 X0.000000 Y10.000000 R5.000000 G1 D10
         """)
         self.assert_output()
         self.assert_position({'x': 15, 'y': 10, 'A': 0, 'D': 10, 'z': 0})
+
+        self.g.arc(0, 10, helix_dim='D', helix_len=10)
+        self.expect_cmd("""
+        G16 X Y D
+        G17
+        G2 X0.000000 Y10.000000 R5.000000 G1 D10
+        """)
+        self.assert_output()
+        self.assert_position({'x': 15, 'y': 20, 'A': 0, 'D': 20, 'z': 0})
 
         with self.assertRaises(RuntimeError):
             self.g.arc(x=10, y=10, radius=1)
@@ -252,7 +299,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G90
         G17
-        G2 X0 Y10 R5.0
+        G2 X0.000000 Y10.000000 R5.000000
         G91
         """)
         self.assert_output()
@@ -262,7 +309,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G90
         G17
-        G2 X0 Y10 R0.0
+        G2 X0.000000 Y10.000000 R0.000000
         G91
         """)
         self.assert_output()
@@ -273,7 +320,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G90
         G17
-        G2 X0 Y20 R5.0
+        G2 X0.000000 Y20.000000 R5.000000
         """)
         self.assert_output()
         self.assert_position({'x': 0, 'y': 20, 'z': 0})
@@ -428,8 +475,12 @@ class TestG(unittest.TestCase):
         self.assert_output()
         self.assert_position({'x': 0, 'y': 4, 'z': 0})
 
+        # test we return to absolute
+        self.g.absolute()
         self.g.meander(3, 2, 1, start='LR', orientation='y')
         self.expect_cmd("""
+        G90
+        G91
         G1 Y2.000000
         G1 X-1.000000
         G1 Y-2.000000
@@ -437,6 +488,7 @@ class TestG(unittest.TestCase):
         G1 Y2.000000
         G1 X-1.000000
         G1 Y-2.000000
+        G90
         """)
         self.assert_output()
         self.assert_position({'x': -3, 'y': 4, 'z': 0})
@@ -446,7 +498,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G16 X Y Z
         G18
-        G3 X0 Z4 R2.0
+        G3 X0.000000 Z4.000000 R2.000000
         """)
         self.assert_output()
         self.assert_position({'y': 0, 'x': 0, 'z': 4})
@@ -455,7 +507,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G16 X Y A
         G19
-        G2 A10 Y0 R5.0
+        G2 Y0.000000 A10.000000 R5.000000
         """)
         self.assert_output()
         self.assert_position({'x': 0, 'y': 0, 'z': 4, 'A': 10})
@@ -464,7 +516,7 @@ class TestG(unittest.TestCase):
         self.expect_cmd("""
         G16 X Y A
         G19
-        G3 A-10 Y0 R5.0
+        G3 Y0.000000 A-10.000000 R5.000000
         """)
         self.assert_output()
         self.assert_position({'x': 0, 'y': 0, 'z': 4, 'A': 0})
@@ -473,20 +525,6 @@ class TestG(unittest.TestCase):
         self.g.toggle_pressure(0)
         self.expect_cmd('Call togglePress P0')
         self.assert_output()
-
-    def test_align_nozzle(self):
-        self.g.align_nozzle('A')
-        self.expect_cmd('Call alignNozzle Q-15 R0.1 L1 I-72 J1')
-        self.assert_output()
-        with self.assertRaises(RuntimeError):
-            self.g.align_nozzle('F')
-
-    def test_align_zero_nozzle(self):
-        self.g.align_zero_nozzle('A')
-        self.expect_cmd('Call alignZeroNozzle Q-15 R0.1 L1 I-72 J1')
-        self.assert_output()
-        with self.assertRaises(RuntimeError):
-            self.g.align_zero_nozzle('F')
 
     def test_set_pressure(self):
         self.g.set_pressure(0, 10)
@@ -498,30 +536,127 @@ class TestG(unittest.TestCase):
         self.expect_cmd('$DO0.0=1')
         self.assert_output()
 
-    def test_save_alignment(self):
-        self.g.save_alignment()
-        self.expect_cmd('Call save_value Q1')
+    def test_rename_axis(self):
+        self.g.rename_axis(z='A')
+        self.g.move(10, 10, 10)
+        self.assert_position({'x': 10.0, 'y': 10.0, 'A': 10, 'z': 10})
+        self.expect_cmd("""
+        G1 X10.000000 Y10.000000 A10.000000
+        """)
         self.assert_output()
 
-    # helper functions  #######################################################
+        self.g.rename_axis(z='B')
+        self.g.move(10, 10, 10)
+        self.assert_position({'x': 20.0, 'y': 20.0, 'z': 20, 'A': 10, 'B': 10})
+        self.expect_cmd("""
+        G1 X10.000000 Y10.000000 B10.000000
+        """)
+        self.assert_output()
 
-    def expect_cmd(self, cmd):
-        self.expected = self.expected + cmd + '\n'
+        self.g.rename_axis(x='W')
+        self.g.move(10, 10, 10)
+        self.assert_position({'x': 30.0, 'y': 30.0, 'z': 30, 'A': 10, 'B': 20,
+                              'W': 10})
+        self.expect_cmd("""
+        G1 W10.000000 Y10.000000 B10.000000
+        """)
+        self.assert_output()
 
-    def assert_output(self):
-        string_rep = ""
-        if is_str(self.expected):
-            string_rep = self.expected
-            self.expected = self.expected.split('\n')
-        self.expected = [x.strip() for x in self.expected if x.strip()]
-        self.outfile.seek(0)
-        lines = self.outfile.readlines()
-        lines = [decode2To3(x).strip() for x in lines if x.strip()]
-        self.assertListEqual(lines, self.expected)
-        self.expected = string_rep
+        self.g.rename_axis(x='X')
+        self.g.arc(x=10, z=10)
+        self.assert_position({'x': 40.0, 'y': 30.0, 'z': 40, 'A': 10, 'B': 30,
+                              'W': 10})
+        self.expect_cmd("""
+        G16 X Y B
+        G18
+        G2 X10.000000 B10.000000 R7.071068
+        """)
+        self.assert_output()
 
-    def assert_position(self, expected_pos):
-        self.assertEqual(self.g.current_position, expected_pos)
+        self.g.abs_arc(x=0, z=0)
+        self.assert_position({'x': 0.0, 'y': 30.0, 'z': 0, 'A': 10, 'B': 0,
+                              'W': 10})
+        self.expect_cmd("""
+        G90
+        G16 X Y B
+        G18
+        G2 X0.000000 B0.000000 R28.284271
+        G91
+        """)
+        self.assert_output()
+
+        self.g.meander(10, 10, 10)
+        self.expect_cmd("""
+        G1 X10.000000
+        G1 Y10.000000
+        G1 X-10.000000
+        """)
+        self.assert_output()
+
+    def test_meander_helpers(self):
+        self.assertEqual(self.g._meander_spacing(12, 1.5), 1.5)
+        self.assertEqual(self.g._meander_spacing(10, 2.2), 2)
+        self.assertEqual(self.g._meander_passes(11, 1.5), 8)
+        self.assertEqual(self.g._meander_spacing(1, 0.11), 0.1)
+
+
+    def test_triangular_wave(self):
+        self.g.triangular_wave(2, 2, 1)
+        self.expect_cmd("""
+        G1 X2.000000 Y2.000000
+        G1 X2.000000 Y-2.000000
+        """)
+        self.assert_output()
+        self.assert_position({'x': 4, 'y': 0, 'z': 0})
+
+        self.g.triangular_wave(1, 2, 2.5, orientation='y')
+        self.expect_cmd("""
+        G1 X1.000000 Y2.000000
+        G1 X-1.000000 Y2.000000
+        G1 X1.000000 Y2.000000
+        G1 X-1.000000 Y2.000000
+        G1 X1.000000 Y2.000000
+        """)
+        self.assert_output()
+        self.assert_position({'x': 5, 'y': 10, 'z': 0})
+
+        self.g.triangular_wave(2, 2, 1.5, start='UL')
+        self.expect_cmd("""
+        G1 X-2.000000 Y2.000000
+        G1 X-2.000000 Y-2.000000
+        G1 X-2.000000 Y2.000000
+        """)
+        self.assert_output()
+        self.assert_position({'x': -1, 'y': 12, 'z': 0})
+
+        self.g.triangular_wave(2, 2, 1, start='LR')
+        self.expect_cmd("""
+        G1 X2.000000 Y-2.000000
+        G1 X2.000000 Y2.000000
+        """)
+        self.assert_output()
+        self.assert_position({'x': 3, 'y': 12, 'z': 0})
+
+        self.g.triangular_wave(2, 2, 1, start='LR', orientation='y')
+        self.expect_cmd("""
+        G1 X2.000000 Y-2.000000
+        G1 X-2.000000 Y-2.000000
+        """)
+        self.assert_output()
+        self.assert_position({'x': 3, 'y': 8, 'z': 0})
+
+        # test we return to absolute
+        self.g.absolute()
+        self.g.triangular_wave(3, 2, 1, start='LR', orientation='y')
+        self.expect_cmd("""
+        G90
+        G91
+        G1 X3.000000 Y-2.000000
+        G1 X-3.000000 Y-2.000000
+        G90
+        """)
+        self.assert_output()
+        self.assert_position({'x': 3, 'y': 4, 'z': 0})
 
 
 if __name__ == '__main__':
