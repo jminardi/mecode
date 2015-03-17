@@ -364,7 +364,8 @@ UR
             filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier    
             
         if self.extrude is True:
-            kwargs['E'] = filament_length + current_extruder_position
+            if 'E' not in kwargs.keys():
+                kwargs['E'] = filament_length + current_extruder_position
             
         self._update_current_position(x=x, y=y, **kwargs)
         
