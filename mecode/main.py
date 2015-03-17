@@ -336,9 +336,9 @@ UR
                 current_extruder_position = 0
             line_length = math.sqrt(x_distance**2 + y_distance**2)
             area = self.layer_height*(self.extrusion_width-self.layer_height) + \
-                math.pi*(self.layer_height/2)**2
+                3.14159*(self.layer_height/2)**2
             volume = line_length*area
-            filament_length = ((4*volume)/(math.pi*self.filament_diameter**2))*self.extrusion_multiplier
+            filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier
             kwargs['E'] = filament_length + current_extruder_position
 
         self._update_current_position(x=x, y=y, z=z, **kwargs)
