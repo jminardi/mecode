@@ -5,6 +5,10 @@ INFO = {'name': 'mecode',
         }
 
 setup(
+    data_files = [
+        ("./mecode/", [
+            "mecode/header.txt",
+            "mecode/footer.txt"])],
     name=INFO['name'],
     version=INFO['version'],
     author='Jack Minardi',
