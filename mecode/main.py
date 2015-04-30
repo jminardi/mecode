@@ -47,8 +47,9 @@ This software was developed by the Lewis Lab at Harvard University.
 
 import math
 import os
-import time
 from collections import defaultdict
+
+from .printer import Printer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -176,7 +177,7 @@ class G(object):
         self.speed_history = []
 
         self._socket = None
-        self._s  = None
+        self._p = None
 
         self.setup()
 
@@ -300,6 +301,8 @@ UR
             self.out_fd.close()
         if self._socket is not None:
             self._socket.close()
+        if self._p is not None:
+            self._p.disconnect()
 
     def home(self):
         """ Move the tool head to the home position (X=0, Y=0).
@@ -794,7 +797,7 @@ UR
         else:
             raise Exception("Invalid plotting backend! Choose one of mayavi or matplotlib.")
 
-    def write(self, statement_in):
+    def write(self, statement_in, resp_needed=False):
         if self.print_lines:
             print(statement_in)
         statement = encode2To3(statement_in + '\n')
@@ -815,18 +818,14 @@ UR
                         raise RuntimeError(response)
                     return response[1:-1]
             elif self.direct_write_mode == 'serial':
-                if self._s is None:
-                    import serial
-                    self._s = serial.Serial(self.printer_port, self.baudrate, timeout=1)
-                    # read all the intro messages
-                    x = True
-                    while x:
-                        x = self._s.readline()
-                        time.sleep(0.01)
-                self._s.write(statement.strip() + '\n')
-                response = self._s.readline()
-                if 'ok' not in response:
-                    raise RuntimeError('Communication Error: ' + response)
+                if self._p is None:
+                    self._p = Printer(self.printer_port, self.baudrate)
+                    self._p.connect()
+                    self._p.start()
+                if resp_needed:
+                    return self._p.get_response(statement_in)
+                else:
+                    self._p.sendline(statement_in)
 
     def rename_axis(self, x=None, y=None, z=None):
         """ Replaces the x, y, or z axis with the given name.
