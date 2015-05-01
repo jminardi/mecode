@@ -84,7 +84,7 @@ class Printer(object):
         self.responses = []
         self.sentlines = []
         self._start_read_thread()
-        while len(self.responses) == 0 or self.responses[-1] != 'echo:Ready\n':
+        while len(self.responses) == 0:
             sleep(0.01)  # wait until the start message is recieved.
         self.responses = []
         logger.debug('Connected to {}'.format(self.s))
@@ -121,6 +121,7 @@ class Printer(object):
         lines = []
         with open(filepath) as f:
             for line in f:
+                line = line.strip()
                 if ';' in line:  # clear out the comments
                     line = line.split(';')[0]
                 if line:
@@ -142,8 +143,12 @@ class Printer(object):
             A line of GCode to send to the printer.
 
         """
-        line = str(line).strip() + '\n'
-        self._buffer.append(line)
+        if line:
+            line = str(line).strip()
+            if ';' in line:  # clear out the comments
+                line = line.split(';')[0]
+            if line:
+                self._buffer.append(line)
 
     def get_response(self, line):
         """ Send the given line and return the response from the printer.
@@ -241,7 +246,7 @@ class Printer(object):
                     _waits += 1
                     if _waits > 1:
                         logger.debug('waiting on _ok_received {}'.format(_waits))
-                        logger.debug(self.sentlines[-1] + '|||||'+ self.responses[-1])
+                        logger.debug(self.sentlines[-1] + ' ||||| '+ self.responses[-1])
                     self._ok_received.wait(2)
                 line = self._next_line()
                 with self._communication_lock:
@@ -261,19 +266,23 @@ class Printer(object):
         from the printer over serial and checks for 'ok's.
 
         """
+        full_resp = ''
         while not self.stop_reading:
             if self.s is not None:
                 line = self.s.readline()
-                if 'ok' in line:
-                    with self._communication_lock:
-                        self._ok_received.set()
-                elif 'Resend:' in line:  # example line: "Resend: 143"
+                if line.startswith('Resend: '):  # example line: "Resend: 143"
                     self._current_line_idx = int(line.split()[1]) - 1
                     logger.debug('Resend Requested - {}'.format(line.strip()))
                     with self._communication_lock:
                         self._ok_received.set()
+                    break
                 if line:
-                    self.responses.append(line)
+                    full_resp += line
+                if 'ok' in line:
+                    with self._communication_lock:
+                        self._ok_received.set()
+                    self.responses.append(full_resp)
+                    full_resp = ''
             else:  # if no printer is attached, wait 10ms to check again.
                 sleep(0.01)
 
