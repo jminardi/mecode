@@ -9,7 +9,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.StreamHandler())
+#logger.addHandler(logging.StreamHandler())
 #fh = logging.FileHandler(os.path.join(HERE, 'voxelface.log'))
 #fh.setFormatter(logging.Formatter('%(asctime)s - %(threadName)s - %(levelname)s - %(message)s'))
 #logger.addHandler(fh)
@@ -72,20 +72,36 @@ class Printer(object):
         # setting/clearing of the `_ok_received` flag.
         self._communication_lock = Lock()
 
+        # If False the Printer instacnce does not own the serial object passed
+        # in and it should not be closed when finished with.
+        self._owns_serial = True
+
     ###  Printer Interface  ###################################################
 
-    def connect(self):
+    def connect(self, s=None):
         """ Instantiate a Serial object using the stored port and baudrate.
+
+        Parameters
+        ----------
+        s : serial.Serial
+            If a serial object is passed in then it will be used instead of
+            creating a new one.
+
         """
-        self.s = serial.Serial(self.port, self.baudrate, timeout=3)
+        if s is None:
+            self.s = serial.Serial(self.port, self.baudrate, timeout=3)
+        else:
+            self.s = s
+            self._owns_serial = False
         self._ok_received.set()
         self._current_line_idx = 0
         self._buffer = []
         self.responses = []
         self.sentlines = []
         self._start_read_thread()
-        while len(self.responses) == 0:
-            sleep(0.01)  # wait until the start message is recieved.
+        if s is None:
+            while len(self.responses) == 0:
+                sleep(0.01)  # wait until the start message is recieved.
         self.responses = []
         logger.debug('Connected to {}'.format(self.s))
 
@@ -98,7 +114,7 @@ class Printer(object):
         if self._read_thread is not None:
             self.stop_reading = True
             self._read_thread.join(3)
-        if self.s is not None:
+        if self.s is not None and self._owns_serial is True:
             self.s.close()
             self.s = None
         self.printing = False
@@ -188,9 +204,7 @@ class Printer(object):
         return pos
 
     def reset_linenumber(self):
-        line = "N0 M110"
-        cksm = self._checksum(line)
-        line = "{}*{}".format(line, cksm)
+        line = "M110 N0"
         self.sendline(line)
 
     ###  Private Methods  ######################################################
@@ -292,7 +306,8 @@ class Printer(object):
 
         """
         line = self._buffer[self._current_line_idx].strip()
-        line = 'N{} {}'.format(self._current_line_idx + 1, line)
+        idx = self._current_line_idx + 1 if not line.startswith('M110') else 0
+        line = 'N{} {}'.format(idx, line)
         checksum = self._checksum(line)
         return '{}*{}\n'.format(line, checksum)
 

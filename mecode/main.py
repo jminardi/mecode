@@ -86,7 +86,7 @@ class G(object):
                  printer_port=8000, baudrate=250000, two_way_comm=True,
                  x_axis='X', y_axis='Y', z_axis='Z', extrude=False,
                  filament_diameter=1.75, layer_height=0.19,
-                 extrusion_width=0.35, extrusion_multiplier=1):
+                 extrusion_width=0.35, extrusion_multiplier=1, setup=True):
         """
         Parameters
         ----------
@@ -138,6 +138,8 @@ class G(object):
         extrusion_multiplier: float (default = 1)
             The length of extrusion filament to be pushed through on a move
             command will be multiplied by this number before being applied.
+        setup : Bool (default: True)
+            Whether or not to automatically call the setup function.
 
         """
         # string file name
@@ -179,7 +181,8 @@ class G(object):
         self._socket = None
         self._p = None
 
-        self.setup()
+        if setup:
+            self.setup()
 
     @property
     def current_position(self):
