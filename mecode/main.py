@@ -284,9 +284,15 @@ UR
         else:
             self.write('G90')
 
-    def teardown(self):
+    def teardown(self, wait=True):
         """ Close the outfile file after writing the footer if opened. This
         method must be called once after all commands.
+
+        Parameters
+        ----------
+        wait : Bool (default: True)
+            Only used if direct_write_model == 'serial'. If True, this method
+            waits to return until all buffered lines have been acknowledged.
 
         """
         if self.out_fd is not None:
@@ -305,7 +311,7 @@ UR
         if self._socket is not None:
             self._socket.close()
         if self._p is not None:
-            self._p.disconnect()
+            self._p.disconnect(wait)
 
     def home(self):
         """ Move the tool head to the home position (X=0, Y=0).

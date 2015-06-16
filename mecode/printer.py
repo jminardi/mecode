@@ -108,9 +108,19 @@ class Printer(object):
         self.responses = []
         logger.debug('Connected to {}'.format(self.s))
 
-    def disconnect(self):
+    def disconnect(self, wait=False):
         """ Disconnect from the printer by stopping threads and closing the port
+
+        Parameters
+        ----------
+        wait : Bool (default: False)
+            If true, this method waits until all lines in the buffer have been
+            sent and acknowledged before disconnecting.
+
         """
+        if wait:
+            while len(self._buffer) > len(self.responses):
+                sleep(0.01)  # wait until all lines in the buffer have been sent
         if self._print_thread is not None:
             self.stop_printing = True
             self._print_thread.join(3)
