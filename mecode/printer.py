@@ -258,13 +258,8 @@ class Printer(object):
             if _paused is True:
                 logger.debug('Printer.paused is now False, resuming.')
             if self._current_line_idx < len(self._buffer):
-                _waits = 0
                 while not self._ok_received.is_set() and not self.stop_printing:
-                    _waits += 1
-                    if _waits > 1:
-                        logger.debug('waiting on _ok_received {}'.format(_waits))
-                        logger.debug(self.sentlines[-1] + ' ||||| '+ self.responses[-1])
-                    self._ok_received.wait(2)
+                    self._ok_received.wait(1)
                 line = self._next_line()
                 with self._communication_lock:
                     self.s.write(line)
