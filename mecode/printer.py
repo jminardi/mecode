@@ -48,6 +48,9 @@ class Printer(object):
         # If set to True, the print_thread will be closed as soon as possible.
         self.stop_printing = False
 
+        # List of all temperature string responses from the printer.
+        self.temp_readings = []
+
         ### Private Attributes  ################################################
 
         # List of all lines to be sent to the printer.
@@ -290,6 +293,8 @@ class Printer(object):
                     with self._communication_lock:
                         self._ok_received.set()
                     break
+                if line.startswith('T:'):
+                    self.temp_readings.append(line)
                 if line:
                     full_resp += line
                 if 'ok' in line:
