@@ -250,7 +250,7 @@ class G(object):
 
     def feed(self, rate):
         """ Set the feed rate (tool head speed) in mm/s
-UR
+
         Parameters
         ----------
         rate : float

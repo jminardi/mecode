@@ -75,9 +75,16 @@ class Printer(object):
         # setting/clearing of the `_ok_received` flag.
         self._communication_lock = Lock()
 
+        # Lock used to ensure connecting and disconnecting is atomic.
+        self._connection_lock = Lock()
+
         # If False the Printer instacnce does not own the serial object passed
         # in and it should not be closed when finished with.
         self._owns_serial = True
+
+        # This is set to true when a disconnect was requested. If a sendline is
+        # called while this is true an error is raised.
+        self._disconnect_pending = False
 
     ###  Printer Interface  ###################################################
 
@@ -91,21 +98,23 @@ class Printer(object):
             creating a new one.
 
         """
-        if s is None:
-            self.s = serial.Serial(self.port, self.baudrate, timeout=3)
-        else:
-            self.s = s
-            self._owns_serial = False
-        self._ok_received.set()
-        self._current_line_idx = 0
-        self._buffer = []
-        self.responses = []
-        self.sentlines = []
-        self._start_read_thread()
-        if s is None:
-            while len(self.responses) == 0:
-                sleep(0.01)  # wait until the start message is recieved.
-        self.responses = []
+        with self._connection_lock:
+            if s is None:
+                self.s = serial.Serial(self.port, self.baudrate, timeout=3)
+            else:
+                self.s = s
+                self._owns_serial = False
+            self._ok_received.set()
+            self._current_line_idx = 0
+            self._buffer = []
+            self.responses = []
+            self.sentlines = []
+            self._disconnect_pending = False
+            self._start_read_thread()
+            if s is None:
+                while len(self.responses) == 0:
+                    sleep(0.01)  # wait until the start message is recieved.
+                self.responses = []
         logger.debug('Connected to {}'.format(self.s))
 
     def disconnect(self, wait=False):
@@ -118,23 +127,26 @@ class Printer(object):
             sent and acknowledged before disconnecting.
 
         """
-        if wait:
-            while len(self._buffer) > len(self.responses):
-                sleep(0.01)  # wait until all lines in the buffer have been sent
-        if self._print_thread is not None:
-            self.stop_printing = True
-            self._print_thread.join(3)
-        if self._read_thread is not None:
-            self.stop_reading = True
-            self._read_thread.join(3)
-        if self.s is not None and self._owns_serial is True:
-            self.s.close()
-            self.s = None
-        self.printing = False
-        self._current_line_idx = 0
-        self._buffer = []
-        self.responses = []
-        self.sentlines = []
+        with self._connection_lock:
+            self._disconnect_pending = True
+            if wait:
+                buf_len = len(self._buffer)
+                while buf_len > len(self.responses):
+                    sleep(0.01)  # wait until all lines in the buffer are sent
+            if self._print_thread is not None:
+                self.stop_printing = True
+                self._print_thread.join(3)
+            if self._read_thread is not None:
+                self.stop_reading = True
+                self._read_thread.join(3)
+            if self.s is not None and self._owns_serial is True:
+                self.s.close()
+                self.s = None
+            self.printing = False
+            self._current_line_idx = 0
+            self._buffer = []
+            self.responses = []
+            self.sentlines = []
         logger.debug('Disconnected from printer')
 
     def load_file(self, filepath):
@@ -172,6 +184,9 @@ class Printer(object):
             A line of GCode to send to the printer.
 
         """
+        if self._disconnect_pending:
+            msg = 'Attempted to send line after a disconnect was requested: {}'
+            raise RuntimeError(msg.format(line))
         if line:
             line = str(line).strip()
             if ';' in line:  # clear out the comments
