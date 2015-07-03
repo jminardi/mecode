@@ -211,6 +211,9 @@ class Printer(object):
         buf_len = len(self._buffer) + 1
         self.sendline(line)
         while len(self.responses) != buf_len:
+            if len(self.responses) > buf_len:
+                msg = "Received more responses than lines sent"
+                raise RuntimeError(msg)
             sleep(0.01)
         return self.responses[-1]
 
