@@ -658,6 +658,21 @@ class TestG(TestGFixture):
         self.assert_output()
         self.assert_position({'x': 3, 'y': 4, 'z': 0})
 
+    def test_scale_factor(self):
+        self.g.move(0, 10)
+        self.assert_position({'x': 0, 'y': 10, 'z': 0})
+        self.g.scale_factor = 0.1
+        self.g.move(10, 0)
+        self.assert_position({'x': 1, 'y': 10, 'z': 0})
+        self.g.abs_move(0, 0)
+        self.assert_position({'x': 0, 'y': 0, 'z': 0})
+        self.g.abs_move(100, 100)
+        self.assert_position({'x': 10, 'y': 10, 'z': 0})
+        self.g.arc(100, 100)
+        self.assert_position({'x': 20, 'y': 20, 'z': 0})
+        self.g.abs_arc(x=10, y=20)
+        self.assert_position({'x': 1, 'y': 2, 'z': 0})
+
 
 if __name__ == '__main__':
     unittest.main()
