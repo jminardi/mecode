@@ -86,7 +86,8 @@ class G(object):
                  printer_port=8000, baudrate=250000, two_way_comm=True,
                  x_axis='X', y_axis='Y', z_axis='Z', extrude=False,
                  filament_diameter=1.75, layer_height=0.19,
-                 extrusion_width=0.35, extrusion_multiplier=1, setup=True):
+                 extrusion_width=0.35, extrusion_multiplier=1, setup=True,
+                 scale_factor=1):
         """
         Parameters
         ----------
@@ -140,6 +141,8 @@ class G(object):
             command will be multiplied by this number before being applied.
         setup : Bool (default: True)
             Whether or not to automatically call the setup function.
+        scale_factor : Float (default: 1)
+            Optional scale factor to apply to all the move commands.
 
         """
         # string file name
@@ -173,6 +176,7 @@ class G(object):
         self.layer_height = layer_height
         self.extrusion_width = extrusion_width
         self.extrusion_multiplier = extrusion_multiplier
+        self.scale_factor = scale_factor
 
         self.position_history = [(0, 0, 0)]
         self.speed = 0
@@ -217,6 +221,8 @@ class G(object):
         >>> g.set_home(0, 0)
 
         """
+        if self.scale_factor != 1:
+            x, y, z, kwargs = self._scale_position(x, y, z, kwargs)
         args = self._format_args(x, y, z, **kwargs)
         self.write('G92 ' + args)
 
@@ -335,6 +341,8 @@ class G(object):
         >>> g.move(A=20)
 
         """
+        if self.scale_factor != 1:
+            x, y, z, kwargs = self._scale_position(x, y, z, kwargs)
         if self.extrude is True and 'E' not in kwargs.keys():
             if self.is_relative is not True:
                 x_move = self.current_position['x'] if x is None else x
@@ -409,6 +417,8 @@ class G(object):
         >>> g.arc(x=10, y=10, radius=50, helix_dim='A', helix_len=5)
 
         """
+        if self.scale_factor != 1:
+            x, y, z, kwargs = self._scale_position(x, y, z, kwargs)
         dims = dict(kwargs)
         if x is not None:
             dims['x'] = x
@@ -895,6 +905,14 @@ class G(object):
         args += ['{0}{1:f}'.format(k, v) for k, v in kwargs.items()]
         args = ' '.join(args)
         return args
+
+    def _scale_position(self, x, y, z, kwargs):
+        s = float(self.scale_factor)
+        scaled_kwargs = {axis: val * s for axis, val in kwargs}
+        x = x * s if x else x
+        y = y * s if y else y
+        z = z * s if z else z
+        return x, y, z, scaled_kwargs
 
     def _update_current_position(self, mode='auto', x=None, y=None, z=None,
                                  **kwargs):
