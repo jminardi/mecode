@@ -286,6 +286,7 @@ class Printer(object):
             if _paused is True:
                 logger.debug('Printer.paused is now False, resuming.')
             if self._current_line_idx < len(self._buffer):
+                self.printing = True
                 while not self._ok_received.is_set() and not self.stop_printing:
                     self._ok_received.wait(1)
                 line = self._next_line()
@@ -298,8 +299,7 @@ class Printer(object):
                 self.sentlines.append(plain_line)
             else:  # if there aren't new lines wait 10ms and check again
                 sleep(0.01)
-
-        self.printing = False
+                self.printing = False
 
     def _read_worker(self):
         """ This method is spawned in the read thread. It continuously reads
