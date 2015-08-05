@@ -760,6 +760,9 @@ class G(object):
     def set_pressure(self, com_port, value):
         self.write('Call setPress P{} Q{}'.format(com_port, value))
 
+    def set_vac(self, com_port, value):
+        self.write('Call setVac P{} Q{}'.format(com_port, value))
+
     def set_valve(self, num, value):
         self.write('$DO{}.0={}'.format(num, value))
 
