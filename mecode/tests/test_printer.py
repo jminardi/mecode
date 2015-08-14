@@ -126,6 +126,16 @@ class TestPrinter(unittest.TestCase):
         expected = 'N2 G90*18\n'
         self.assertEqual(line, expected)
 
+    #def test_readline_timeout(self):
+    #    def side_effect():
+    #        yield 'ok '
+    #        yield '58404\n'
+    #        while True:
+    #            yield 'ok\n'
+    #    self.p.s.readline.side_effect = side_effect()
+    #    with self.assertRaises(RuntimeError):
+    #        self.p._start_read_thread()
+
 
 
 if __name__ == '__main__':

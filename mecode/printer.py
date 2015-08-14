@@ -135,10 +135,10 @@ class Printer(object):
                     sleep(0.01)  # wait until all lines in the buffer are sent
             if self._print_thread is not None:
                 self.stop_printing = True
-                self._print_thread.join(3)
+                self._print_thread.join(self.s.writeTimeout + 1)
             if self._read_thread is not None:
                 self.stop_reading = True
-                self._read_thread.join(3)
+                self._read_thread.join(self.s.timeout + 1)
             if self.s is not None and self._owns_serial is True:
                 self.s.close()
                 self.s = None
@@ -278,7 +278,7 @@ class Printer(object):
         """
         while not self.stop_printing:
             _paused = False
-            while self.paused is True:
+            while self.paused is True and not self.stop_printing:
                 if _paused is False:
                     logger.debug('Printer.paused is True, waiting...')
                     _paused = True
@@ -320,6 +320,22 @@ class Printer(object):
                     self.temp_readings.append(line)
                 if line:
                     full_resp += line
+                    # If there is no newline char in the response that means
+                    # serial.readline() hit the timeout before a full line. This
+                    # means communication has broken down so both threads need
+                    # to be closed down.
+                    if '\n' not in line:
+                        self.printing = False
+                        self.stop_printing = True
+                        self.stop_reading = True
+                        with self._communication_lock:
+                            self._ok_received.set()
+                        msg = """readline timed out mid-line.
+                            last sentline:  {}
+                            response:       {}
+                        """
+                        raise RuntimeError(msg.format(self.sentlines[-1:],
+                                                      full_resp))
                 if 'ok' in line:
                     with self._communication_lock:
                         self._ok_received.set()
