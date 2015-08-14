@@ -4,7 +4,7 @@ DVAR $press
 DVAR $length
 DVAR $lame
 DVAR $comport
-
+DVAR $vacpress
 
 $DO0.0=0
 $DO1.0=0

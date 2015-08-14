@@ -6,7 +6,7 @@ INFO = {'name': 'mecode',
 
 setup(
     data_files = [
-        ("./mecode/", [
+        ("./mecode", [
             "mecode/header.txt",
             "mecode/footer.txt"])],
     name=INFO['name'],
