@@ -106,6 +106,7 @@ Installation
 ```bash
 $ git clone https://github.com/jminardi/mecode.git
 $ cd mecode
+$ pip install -r requirements.txt
 $ python setup.py install
 ```
 
