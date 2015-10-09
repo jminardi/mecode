@@ -1,7 +1,7 @@
 import os
 import logging
 from threading import Thread, Event, Lock
-from time import sleep
+from time import sleep, time
 
 import serial
 
@@ -196,7 +196,7 @@ class Printer(object):
             if line:
                 self._buffer.append(line)
 
-    def get_response(self, line):
+    def get_response(self, line, timeout=0):
         """ Send the given line and return the response from the printer.
 
         Parameters
@@ -212,10 +212,13 @@ class Printer(object):
         """
         buf_len = len(self._buffer) + 1
         self.sendline(line)
+        start_time = time()
         while len(self.responses) != buf_len:
             if len(self.responses) > buf_len:
                 msg = "Received more responses than lines sent"
                 raise RuntimeError(msg)
+            if timeout > 0 and (time() - start_time) > timeout:
+                return ''  # return blank string on timeout.
             sleep(0.01)
         return self.responses[-1]
 

@@ -17,6 +17,8 @@ class TestPrinter(unittest.TestCase):
         self.p = Printer()
         self.p.s = Mock(spec=serial.Serial(), name='MockSerial')
         self.p.s.readline.return_value = 'ok\n'
+        self.p.s.timeout = 1
+        self.p.s.writeTimeout = 1
 
     def tearDown(self):
         self.p.paused = False
@@ -125,6 +127,12 @@ class TestPrinter(unittest.TestCase):
         line = self.p._next_line()
         expected = 'N2 G90*18\n'
         self.assertEqual(line, expected)
+
+    def test_get_response(self):
+        resp = self.p.get_response('test', timeout=0.2)
+        expected = ''
+        # We expect to get a blank response when the timeout is hit.
+        self.assertEqual(resp, expected)
 
     #def test_readline_timeout(self):
     #    def side_effect():
