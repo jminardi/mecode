@@ -135,10 +135,12 @@ class Printer(object):
                     sleep(0.01)  # wait until all lines in the buffer are sent
             if self._print_thread is not None:
                 self.stop_printing = True
-                self._print_thread.join(self.s.writeTimeout + 1)
+                timeout = 5 if self.s is None else self.s.writeTimeout + 1
+                self._print_thread.join(timeout)
             if self._read_thread is not None:
                 self.stop_reading = True
-                self._read_thread.join(self.s.timeout + 1)
+                timeout = 5 if self.s is None else self.s.timeout + 1
+                self._read_thread.join(timeout)
             if self.s is not None and self._owns_serial is True:
                 self.s.close()
                 self.s = None
