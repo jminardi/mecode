@@ -266,7 +266,7 @@ class G(object):
         Parameters
         ----------
         time : float
-            Time in seconds to pause code execution.
+            Time in milliseconds to pause code execution.
 
         """
         self.write('G4 P{}'.format(time))
