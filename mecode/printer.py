@@ -5,6 +5,12 @@ from time import sleep, time
 
 import serial
 
+try:
+    reduce
+except NameError:
+    # In python 3, reduce is no longer imported by default.
+    from functools import reduce
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 logger = logging.getLogger(__name__)
@@ -383,4 +389,6 @@ class Printer(object):
     def _checksum(self, line):
         """ Calclate the checksum by xor'ing all characters together.
         """
+        if not line:
+            raise RuntimeError("cannot compute checksum of an empty string")
         return reduce(lambda a, b: a ^ b, [ord(char) for char in line])
