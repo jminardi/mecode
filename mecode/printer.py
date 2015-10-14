@@ -256,7 +256,7 @@ class Printer(object):
             return
         self.printing = True
         self.stop_printing = False
-        self._print_thread = Thread(target=self._print_worker, name='Print')
+        self._print_thread = Thread(target=self._print_worker_entrypoint, name='Print')
         self._print_thread.setDaemon(True)
         self._print_thread.start()
         logger.debug('print_thread started')
@@ -271,10 +271,22 @@ class Printer(object):
         if self._read_thread is not None and self._read_thread.is_alive():
             return
         self.stop_reading = False
-        self._read_thread = Thread(target=self._read_worker, name='Read')
+        self._read_thread = Thread(target=self._read_worker_entrypoint, name='Read')
         self._read_thread.setDaemon(True)
         self._read_thread.start()
         logger.debug('read_thread started')
+
+    def _print_worker_entrypoint(self):
+        try:
+            self._print_worker()
+        except Exception as e:
+            logger.exception("Exception running print worker: " + str(e))
+
+    def _read_worker_entrypoint(self):
+        try:
+            self._read_worker()
+        except Exception as e:
+            logger.exception("Exception running read worker: " + str(e))
 
     def _print_worker(self):
         """ This method is spawned in the print thread. It loops over every line
