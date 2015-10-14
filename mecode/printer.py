@@ -219,6 +219,8 @@ class Printer(object):
                 raise RuntimeError(msg)
             if timeout > 0 and (time() - start_time) > timeout:
                 return ''  # return blank string on timeout.
+            if not self._is_read_thread_running():
+                raise RuntimeError("can't get response from serial since read thread isn't running")
             sleep(0.01)
         return self.responses[-1]
 
@@ -252,11 +254,11 @@ class Printer(object):
         this method does nothing.
 
         """
-        if self._print_thread is not None and self._print_thread.is_alive():
+        if self._is_print_thread_running():
             return
         self.printing = True
         self.stop_printing = False
-        self._print_thread = Thread(target=self._print_worker, name='Print')
+        self._print_thread = Thread(target=self._print_worker_entrypoint, name='Print')
         self._print_thread.setDaemon(True)
         self._print_thread.start()
         logger.debug('print_thread started')
@@ -268,13 +270,31 @@ class Printer(object):
         nothing.
 
         """
-        if self._read_thread is not None and self._read_thread.is_alive():
+        if self._is_read_thread_running():
             return
         self.stop_reading = False
-        self._read_thread = Thread(target=self._read_worker, name='Read')
+        self._read_thread = Thread(target=self._read_worker_entrypoint, name='Read')
         self._read_thread.setDaemon(True)
         self._read_thread.start()
         logger.debug('read_thread started')
+
+    def _print_worker_entrypoint(self):
+        try:
+            self._print_worker()
+        except Exception as e:
+            logger.exception("Exception running print worker: " + str(e))
+
+    def _read_worker_entrypoint(self):
+        try:
+            self._read_worker()
+        except Exception as e:
+            logger.exception("Exception running read worker: " + str(e))
+
+    def _is_print_thread_running(self):
+        return self._print_thread is not None and self._print_thread.is_alive()
+
+    def _is_read_thread_running(self):
+        return self._read_thread is not None and self._read_thread.is_alive()
 
     def _print_worker(self):
         """ This method is spawned in the print thread. It loops over every line
