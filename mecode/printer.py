@@ -45,9 +45,6 @@ class Printer(object):
         # True if the print thread is alive and sending lines.
         self.printing = False
 
-        # Set to True to pause the print.
-        self.paused = False
-
         # If set to True, the read_thread will be closed as soon as possible.
         self.stop_reading = False
 
@@ -84,6 +81,10 @@ class Printer(object):
         # Lock used to ensure connecting and disconnecting is atomic.
         self._connection_lock = Lock()
 
+        # Internal state of whether printing is paused, initially not paused.
+        self._resume_event = Event()
+        self._resume_event.set()
+
         # If False the Printer instacnce does not own the serial object passed
         # in and it should not be closed when finished with.
         self._owns_serial = True
@@ -91,6 +92,18 @@ class Printer(object):
         # This is set to true when a disconnect was requested. If a sendline is
         # called while this is true an error is raised.
         self._disconnect_pending = False
+
+    @property
+    def paused(self):
+        """ Set to True to pause the print. """
+        return not self._resume_event.is_set()
+
+    @paused.setter
+    def paused(self, val):
+        if val:
+            self._resume_event.clear()
+        else:
+            self._resume_event.set()
 
     ###  Printer Interface  ###################################################
 
@@ -312,13 +325,9 @@ class Printer(object):
 
         """
         while not self.stop_printing:
-            _paused = False
-            while self.paused is True and not self.stop_printing:
-                if _paused is False:
-                    logger.debug('Printer.paused is True, waiting...')
-                    _paused = True
-                sleep(0.01)
-            if _paused is True:
+            if self.paused and not self.stop_printing:
+                logger.debug('Printer.paused is True, waiting...')
+                self._resume_event.wait()
                 logger.debug('Printer.paused is now False, resuming.')
             if self._current_line_idx < len(self._buffer):
                 self.printing = True
