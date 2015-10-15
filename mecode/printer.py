@@ -3,6 +3,8 @@ import logging
 from threading import Thread, Event, Lock
 from time import sleep, time
 
+from concurrent import futures
+from future.utils import raise_from
 import serial
 
 try:
@@ -58,6 +60,13 @@ class Printer(object):
 
         # List of all lines to be sent to the printer.
         self._buffer = []
+
+        # Dictionary mapping response line number to Future waiting for that
+        # response line string.
+        self._readline_futures = {}
+
+        # Lock used to ensure the state of the _readline_futures data structure.
+        self._readline_futures_lock = Lock()
 
         # Index into the _buffer of the next line to send to the printer.
         self._current_line_idx = 0
@@ -219,7 +228,7 @@ class Printer(object):
             if line:
                 self._buffer.append(line)
 
-    def get_response(self, line, timeout=0):
+    def get_response(self, line, timeout=None):
         """ Send the given line and return the response from the printer.
 
         Parameters
@@ -235,17 +244,21 @@ class Printer(object):
         """
         buf_len = len(self._buffer) + 1
         self.sendline(line)
-        start_time = time()
-        while len(self.responses) != buf_len:
-            if len(self.responses) > buf_len:
-                msg = "Received more responses than lines sent"
-                raise RuntimeError(msg)
-            if timeout > 0 and (time() - start_time) > timeout:
-                return ''  # return blank string on timeout.
-            if not self._is_read_thread_running():
-                raise RuntimeError("can't get response from serial since read thread isn't running")
-            sleep(0.01)
-        return self.responses[-1]
+
+        future = self._readline_future(buf_len)
+        # Do this thread-still-alive check *after* grabbing a future since the
+        # thread now knows about it and can cancel it if the thread dies.
+        if not self._is_read_thread_running():
+            raise RuntimeError("can't get response from serial since read thread isn't running")
+        try:
+            # Block and wait for a response.
+            resp = future.result(timeout)
+        except futures.TimeoutError:
+            # Return blank string on timeout.
+            resp = ''
+        except futures.CancelledError as e:
+            raise_from(RuntimeError("can't get response from serial since read thread isn't running: " + str(e)), e)
+        return resp
 
     def current_position(self):
         """ Get the current postion of the printer.
@@ -304,14 +317,31 @@ class Printer(object):
     def _print_worker_entrypoint(self):
         try:
             self._print_worker()
-        except Exception as e:
+        except BaseException as e:
             logger.exception("Exception running print worker: " + str(e))
 
     def _read_worker_entrypoint(self):
         try:
             self._read_worker()
-        except Exception as e:
+        except BaseException as e:
             logger.exception("Exception running read worker: " + str(e))
+            # Reject promises by setting exception.  If other threads are
+            # waitiing on the promise, this exception will get raised in that
+            # thread.
+            with self._readline_futures_lock:
+                for linenum, future in self._readline_futures.items():
+                    # Don't change the future's result if it's already done.
+                    if not future.done():
+                        future.set_exception(e)
+                    del self._readline_futures[linenum]
+        finally:
+            # Cancel any promises still left.
+            with self._readline_futures_lock:
+                for linenum, future in self._readline_futures.items():
+                    # Don't change the future's result if it's already done.
+                    if not future.done():
+                        future.cancel()
+                    del self._readline_futures[linenum]
 
     def _is_print_thread_running(self):
         return self._print_thread is not None and self._print_thread.is_alive()
@@ -332,6 +362,8 @@ class Printer(object):
             if self._current_line_idx < len(self._buffer):
                 self.printing = True
                 while not self._ok_received.is_set() and not self.stop_printing:
+                    # Note: This wait causes a 1 second delay before responding
+                    # to stop_printing.
                     self._ok_received.wait(1)
                 line = self._next_line()
                 with self._communication_lock:
@@ -383,10 +415,46 @@ class Printer(object):
                 if 'ok' in line:
                     with self._communication_lock:
                         self._ok_received.set()
-                    self.responses.append(full_resp)
+                    linenum = len(self.responses) + 1
+                    self._set_readline_result(linenum, full_resp)
                     full_resp = ''
             else:  # if no printer is attached, wait 10ms to check again.
                 sleep(0.01)
+
+    def _set_readline_result(self, linenum, result):
+        """ Set the result for a given line number.  This resolves the future
+        waiting for the response of this line.
+        """
+        future = self._readline_future(linenum)
+        self.responses.append(result)
+        # Ideally the future would be set running sooner, when we start reading
+        # the line, but that's more complicated and we don't really care.
+        if future.set_running_or_notify_cancel():
+            # Resolve the future *after* appending to responses.  Some callers
+            # may depend on the responses array after waking up.
+            future.set_result(result)
+        # Remove the reference to the future to prevent a memory leak.
+        with self._readline_futures_lock:
+            self._readline_futures.pop(linenum, None)
+
+    def _readline_future(self, linenum):
+        """ Return a Future to read the given line number. """
+        with self._readline_futures_lock:
+            if len(self.responses) >= linenum:
+                # We already have the response.  Return a future that's already
+                # resolved.
+                future = futures.Future()
+                future.set_result(self.responses[linenum])
+                return future
+
+            if linenum in self._readline_futures:
+                # We have a cached future.
+                return self._readline_futures[linenum]
+
+            # Create a new future and cache it.
+            future = futures.Future()
+            self._readline_futures[linenum] = future
+            return future
 
     def _next_line(self):
         """ Prepares the next line to be sent to the printer by prepending the
