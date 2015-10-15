@@ -130,14 +130,18 @@ class Printer(object):
         ----------
         wait : Bool (default: False)
             If true, this method waits until all lines in the buffer have been
-            sent and acknowledged before disconnecting.
+            sent and acknowledged before disconnecting.  Clearing the buffer
+            isn't guaranteed.  If the read thread isn't running for some reason,
+            this function may return without waiting even when wait is set to
+            True.
 
         """
         with self._connection_lock:
             self._disconnect_pending = True
             if wait:
                 buf_len = len(self._buffer)
-                while buf_len > len(self.responses):
+                while buf_len > len(self.responses) and \
+                      self._is_read_thread_running():
                     sleep(0.01)  # wait until all lines in the buffer are sent
             if self._print_thread is not None:
                 self.stop_printing = True
