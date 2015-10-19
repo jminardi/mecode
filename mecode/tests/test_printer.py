@@ -109,15 +109,20 @@ class TestPrinter(unittest.TestCase):
         self.assertEqual(self.p._current_line_idx, len(self.p._buffer))
 
     def test_pause(self):
+        # Initially we shouldn't be paused.
+        self.assertFalse(self.p.paused)
+
         self.p.load_file(os.path.join(HERE, 'test.gcode'))
         self.p.start()
         self.p.paused = True
+        self.assertTrue(self.p.paused)
         self.assertTrue(self.p._print_thread.is_alive())
         sleep(.1)
         expected = self.p._current_line_idx
         sleep(1)
         self.assertEqual(self.p._current_line_idx, expected)
         self.p.paused = False
+        self.assertFalse(self.p.paused)
         while self.p.printing:
             sleep(0.01)
         self.assertNotEqual(self.p._current_line_idx, expected)
