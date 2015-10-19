@@ -2,7 +2,12 @@ import unittest
 from mock import Mock
 import os
 from time import sleep
-from threading import Thread, _Event
+from threading import Thread
+try:
+    from threading import _Event as Event
+except ImportError:
+    # The _Event class was renamed to Event in python 3.
+    from threading import Event
 
 import serial
 
@@ -67,7 +72,7 @@ class TestPrinter(unittest.TestCase):
         self.assertTrue(self.p._read_thread.is_alive())
 
     def test_ok_received(self):
-        self.assertIsInstance(self.p._ok_received, _Event)
+        self.assertIsInstance(self.p._ok_received, Event)
         self.assertTrue(self.p._ok_received.is_set())
 
     def test_printing(self):
@@ -128,7 +133,12 @@ class TestPrinter(unittest.TestCase):
         expected = 'N2 G90*18\n'
         self.assertEqual(line, expected)
 
-    def test_get_response(self):
+    def test_get_response_no_threads_running(self):
+        with self.assertRaises(RuntimeError):
+            self.p.get_response('test')
+
+    def test_get_response_timeout(self):
+        self.p._is_read_thread_running = lambda: True
         resp = self.p.get_response('test', timeout=0.2)
         expected = ''
         # We expect to get a blank response when the timeout is hit.

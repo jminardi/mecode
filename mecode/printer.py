@@ -5,6 +5,12 @@ from time import sleep, time
 
 import serial
 
+try:
+    reduce
+except NameError:
+    # In python 3, reduce is no longer imported by default.
+    from functools import reduce
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 logger = logging.getLogger(__name__)
@@ -124,14 +130,18 @@ class Printer(object):
         ----------
         wait : Bool (default: False)
             If true, this method waits until all lines in the buffer have been
-            sent and acknowledged before disconnecting.
+            sent and acknowledged before disconnecting.  Clearing the buffer
+            isn't guaranteed.  If the read thread isn't running for some reason,
+            this function may return without waiting even when wait is set to
+            True.
 
         """
         with self._connection_lock:
             self._disconnect_pending = True
             if wait:
                 buf_len = len(self._buffer)
-                while buf_len > len(self.responses):
+                while buf_len > len(self.responses) and \
+                      self._is_read_thread_running():
                     sleep(0.01)  # wait until all lines in the buffer are sent
             if self._print_thread is not None:
                 self.stop_printing = True
@@ -225,6 +235,8 @@ class Printer(object):
                 raise RuntimeError(msg)
             if timeout > 0 and (time() - start_time) > timeout:
                 return ''  # return blank string on timeout.
+            if not self._is_read_thread_running():
+                raise RuntimeError("can't get response from serial since read thread isn't running")
             sleep(0.01)
         return self.responses[-1]
 
@@ -258,11 +270,11 @@ class Printer(object):
         this method does nothing.
 
         """
-        if self._print_thread is not None and self._print_thread.is_alive():
+        if self._is_print_thread_running():
             return
         self.printing = True
         self.stop_printing = False
-        self._print_thread = Thread(target=self._print_worker, name='Print')
+        self._print_thread = Thread(target=self._print_worker_entrypoint, name='Print')
         self._print_thread.setDaemon(True)
         self._print_thread.start()
         logger.debug('print_thread started')
@@ -274,13 +286,31 @@ class Printer(object):
         nothing.
 
         """
-        if self._read_thread is not None and self._read_thread.is_alive():
+        if self._is_read_thread_running():
             return
         self.stop_reading = False
-        self._read_thread = Thread(target=self._read_worker, name='Read')
+        self._read_thread = Thread(target=self._read_worker_entrypoint, name='Read')
         self._read_thread.setDaemon(True)
         self._read_thread.start()
         logger.debug('read_thread started')
+
+    def _print_worker_entrypoint(self):
+        try:
+            self._print_worker()
+        except Exception as e:
+            logger.exception("Exception running print worker: " + str(e))
+
+    def _read_worker_entrypoint(self):
+        try:
+            self._read_worker()
+        except Exception as e:
+            logger.exception("Exception running read worker: " + str(e))
+
+    def _is_print_thread_running(self):
+        return self._print_thread is not None and self._print_thread.is_alive()
+
+    def _is_read_thread_running(self):
+        return self._read_thread is not None and self._read_thread.is_alive()
 
     def _print_worker(self):
         """ This method is spawned in the print thread. It loops over every line
@@ -369,4 +399,6 @@ class Printer(object):
     def _checksum(self, line):
         """ Calclate the checksum by xor'ing all characters together.
         """
+        if not line:
+            raise RuntimeError("cannot compute checksum of an empty string")
         return reduce(lambda a, b: a ^ b, [ord(char) for char in line])
