@@ -92,6 +92,11 @@ class Printer(object):
         # called while this is true an error is raised.
         self._disconnect_pending = False
 
+        # When we reset the line number Marlin's internal number will differ
+        # from our own _current_line_idx. This offset is used to keep those two
+        # in sync.
+        self._reset_offset = 0
+
     ###  Printer Interface  ###################################################
 
     def connect(self, s=None):
@@ -352,11 +357,11 @@ class Printer(object):
             if self.s is not None:
                 line = self.s.readline()
                 if line.startswith('Resend: '):  # example line: "Resend: 143"
-                    self._current_line_idx = int(line.split()[1]) - 1
+                    self._current_line_idx = int(line.split()[1]) - 1 + self._reset_offset
                     logger.debug('Resend Requested - {}'.format(line.strip()))
                     with self._communication_lock:
                         self._ok_received.set()
-                    break
+                    continue
                 if line.startswith('T:'):
                     self.temp_readings.append(line)
                 if line:
@@ -391,7 +396,9 @@ class Printer(object):
 
         """
         line = self._buffer[self._current_line_idx].strip()
-        idx = self._current_line_idx + 1 if not line.startswith('M110') else 0
+        if line.startswith('M110'):
+            self._reset_offset = self._current_line_idx + 1
+        idx = self._current_line_idx + 1 - self._reset_offset
         line = 'N{} {}'.format(idx, line)
         checksum = self._checksum(line)
         return '{}*{}\n'.format(line, checksum)
