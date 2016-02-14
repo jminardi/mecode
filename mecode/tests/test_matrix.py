@@ -75,6 +75,37 @@ class TestGMatrix(TestGFixture):
         self.g.pop_matrix()
         self.assert_output()
 
+    def test_abs_move_and_rotate(self):
+        self.g.abs_move(x=5.0)
+        self.assertEqual(self.g.current_position['x'], 5.0)
+        self.assertEqual(self.g.current_position['y'], 0.0)
+        self.assertEqual(self.g.current_position['z'], 0.0)
+        self.g.rotate(math.pi)
+        self.assertAlmostEqual(self.g.current_position['x'], -5.0)
+        self.assertAlmostEqual(self.g.current_position['y'], 0.0)
+        self.assertAlmostEqual(self.g.current_position['z'], 0.0)
+
+    def test_abs_zmove(self):
+        self.g.rotate(math.pi)
+        self.g.abs_move(x=1)
+        self.assertAlmostEqual(self.g.current_position['x'], 1.0)
+        self.assertAlmostEqual(self.g.current_position['y'], 0.0)
+        self.assertAlmostEqual(self.g.current_position['z'], 0.0)
+        self.g.abs_move(z=2)
+        self.assertAlmostEqual(self.g.current_position['x'], 1.0)
+        self.assertAlmostEqual(self.g.current_position['y'], 0.0)
+        self.assertAlmostEqual(self.g.current_position['z'], 2.0)
+
+        self.expect_cmd("""
+        G90  
+        G1 X-1.000000 Y0.000000 Z0.000000
+        G91
+        G90 
+        G1 X-1.000000 Y0.000000 Z2.000000
+        G91
+        """)
+        self.assert_output()
+
     def test_arc(self):
         self.g.rotate(math.pi/2)
         self.g.arc(x=10, y=0)

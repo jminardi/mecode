@@ -90,11 +90,12 @@ class GMatrix(G):
         (x,y,z) = self._matrix_transform(length, 0, 0)
         return math.sqrt(x**2 + y**2 + z**2)
 
+    # abs_move ends up invoking move, which means that
+    # we don't need to do a matrix transform here.
     def abs_move(self, x=None, y=None, z=None, **kwargs):
         if x is None: x = self.current_position['x']
         if y is None: y = self.current_position['y']
         if z is None: z = self.current_position['z']
-        (x,y,z) = self._matrix_transform(x,y,z)
         super(GMatrix, self).abs_move(x,y,z, **kwargs)
 
     def move(self, x=None, y=None, z=None, **kwargs):
