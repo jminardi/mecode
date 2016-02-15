@@ -2,6 +2,7 @@
 
 from os.path import abspath, dirname
 import unittest
+import sys
 import math
 
 HERE = dirname(abspath(__file__))
@@ -77,24 +78,16 @@ class TestGMatrix(TestGFixture):
 
     def test_abs_move_and_rotate(self):
         self.g.abs_move(x=5.0)
-        self.assertEqual(self.g.current_position['x'], 5.0)
-        self.assertEqual(self.g.current_position['y'], 0.0)
-        self.assertEqual(self.g.current_position['z'], 0.0)
+        self.assert_almost_position({'x' : 5.0, 'y':0, 'z':0})
         self.g.rotate(math.pi)
-        self.assertAlmostEqual(self.g.current_position['x'], -5.0)
-        self.assertAlmostEqual(self.g.current_position['y'], 0.0)
-        self.assertAlmostEqual(self.g.current_position['z'], 0.0)
+        self.assert_almost_position({'x' : -5.0, 'y':0, 'z':0})
 
-    def test_abs_zmove(self):
+    def test_abs_zmove_with_flip(self):
         self.g.rotate(math.pi)
         self.g.abs_move(x=1)
-        self.assertAlmostEqual(self.g.current_position['x'], 1.0)
-        self.assertAlmostEqual(self.g.current_position['y'], 0.0)
-        self.assertAlmostEqual(self.g.current_position['z'], 0.0)
+        self.assert_almost_position({'x': 1.0, 'y': 0, 'z': 0})
         self.g.abs_move(z=2)
-        self.assertAlmostEqual(self.g.current_position['x'], 1.0)
-        self.assertAlmostEqual(self.g.current_position['y'], 0.0)
-        self.assertAlmostEqual(self.g.current_position['z'], 2.0)
+        self.assert_almost_position({'x': 1.0, 'y': 0, 'z': 2})        
 
         self.expect_cmd("""
         G90  
@@ -105,6 +98,31 @@ class TestGMatrix(TestGFixture):
         G91
         """)
         self.assert_output()
+
+    def test_abs_zmove_with_rotate(self):
+        self.g.rotate(math.pi/2.0)
+        self.g.abs_move(x=1)
+        self.assert_almost_position({'x': 1.0, 'y': 0, 'z': 0})
+        self.g.abs_move(z=2)
+        self.assert_almost_position({'x': 1.0, 'y': 0, 'z': 2})        
+        self.expect_cmd("""
+        G90  
+        G1 X0.000000 Y1.000000 Z0.000000
+        G91
+        G90 
+        G1 X0.000000 Y1.000000 Z2.000000
+        G91
+        """)
+        self.assert_output()
+
+    def test_scale_and_abs_move(self):
+        self.g.abs_move(x=1)
+        self.g.scale(2.0)
+        self.assert_almost_position({'x': .5, 'y': 0, 'z': 0})
+        self.g.abs_move()
+        self.assert_almost_position({'x': .5, 'y': 0, 'z': 0})
+        self.g.abs_move(z=3)
+        self.assert_almost_position({'x': .5, 'y': 0, 'z': 3})
 
     def test_arc(self):
         self.g.rotate(math.pi/2)
