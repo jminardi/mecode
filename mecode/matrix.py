@@ -52,7 +52,7 @@ class GMatrix(G):
     # Matrix manipulation #####################################################        
     def _matrix_setup(self):
         " Create our matrix stack. "
-        self.matrix_stack = [np.identity(2)]
+        self.matrix_stack = [np.matrix([[1.0, 0], [0.0, 1.0]])]
 
     def push_matrix(self):
         " Push a copy of our current transformation matrix. "
@@ -94,7 +94,8 @@ class GMatrix(G):
         if x is None: x = self.current_position['x']
         if y is None: y = self.current_position['y']
         if z is None: z = self.current_position['z']
-        (x,y,z) = self._matrix_transform(x,y,z)
+        # abs_move ends up invoking move, which means that
+        # we don't need to do a matrix transform here.
         super(GMatrix, self).abs_move(x,y,z, **kwargs)
 
     def move(self, x=None, y=None, z=None, **kwargs):
@@ -120,7 +121,7 @@ class GMatrix(G):
         if y is None: y = 0.0
 
         matrix = self.matrix_stack[-1]
-        transform = matrix.T * np.matrix([x, y]).T
+        transform = matrix.getI() * np.matrix([x, y]).T
         
         return { 'x':transform.item(0),
                  'y':transform.item(1),
