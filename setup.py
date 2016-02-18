@@ -2,6 +2,7 @@ from setuptools import setup, find_packages
 
 INFO = {'name': 'mecode',
         'version': '0.2.2',
+        'description': 'Simple GCode generator',
         'author': 'Jack Minardi',
         'author_email': 'jack@minardi.org',
         }
@@ -9,6 +10,7 @@ INFO = {'name': 'mecode',
 setup(
     name=INFO['name'],
     version=INFO['version'],
+    description=INFO['description'],
     author=INFO['author'],
     author_email=INFO['author_email'],
     packages=find_packages(),
