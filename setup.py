@@ -18,8 +18,5 @@ setup(
     download_url='https://github.com/jminardi/mecode/tarball/master',
     keywords=['gcode', '3dprinting', 'cnc', 'reprap'],
     zip_safe=False,
-    data_files = [
-        ("./mecode", [
-            "mecode/header.txt",
-            "mecode/footer.txt"])],
+    include_package_data=True,
 )
