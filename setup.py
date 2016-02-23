@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 INFO = {'name': 'mecode',
-        'version': '0.2.3',
+        'version': '0.2.5',
         'description': 'Simple GCode generator',
         'author': 'Jack Minardi',
         'author_email': 'jack@minardi.org',
@@ -19,4 +19,8 @@ setup(
     keywords=['gcode', '3dprinting', 'cnc', 'reprap'],
     zip_safe=False,
     include_package_data=True,
+    install_requires=[
+        'pyserial',
+        'numpy',
+    ],
 )
