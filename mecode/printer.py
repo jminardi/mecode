@@ -262,8 +262,8 @@ class Printer(object):
         pos = dict([(k, float(v)) for k, v in r])
         return pos
 
-    def reset_linenumber(self):
-        line = "M110 N0"
+    def reset_linenumber(self, number = 0):
+        line = "M110 N{}".format(number)
         self.sendline(line)
 
     ###  Private Methods  ######################################################
@@ -396,7 +396,10 @@ class Printer(object):
 
         """
         line = self._buffer[self._current_line_idx].strip()
-        if line.startswith('M110'):
+        if line.startswith('M110 N'):
+            new_number = int(line[6:])
+            self._reset_offset = self._current_line_idx + 1 - new_number
+        elif line.startswith('M110'):
             self._reset_offset = self._current_line_idx + 1
         idx = self._current_line_idx + 1 - self._reset_offset
         line = 'N{} {}'.format(idx, line)
