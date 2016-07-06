@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+import os
 from os.path import abspath, dirname
 import unittest
 import sys
