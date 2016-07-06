@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys
 
-TEST_REQUIRES = []
+TEST_REQUIRES = ['pytest']
 if sys.version_info[:2] < (3, 3):
     TEST_REQUIRES += ['mock']
 
@@ -26,6 +26,7 @@ setup(
     package_data = {
         '': ['*.txt', '*.md'],
     },
+    setup_requires=['pytest-runner'],
     install_requires=[
         'pyserial',
         'numpy',

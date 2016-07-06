@@ -125,9 +125,9 @@ visualization. An easy way to install them is to use
 
 Testing
 -------
-In python earlier than 3.3, you need the `mock` package.
+Run the tests:
 
-    pip install mock
+    python setup.py test
 
 TODO
 ----
