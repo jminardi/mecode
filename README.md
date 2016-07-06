@@ -123,6 +123,12 @@ visualization. An easy way to install them is to use
 [0]: https://www.enthought.com/products/canopy/
 [1]: https://store.continuum.io/cshop/anaconda/
 
+Testing
+-------
+In python earlier than 3.3, you need the `mock` package.
+
+    pip install mock
+
 TODO
 ----
 * add pressure box comport to `__init__()` method
