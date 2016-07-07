@@ -49,33 +49,10 @@ import math
 import os
 from collections import defaultdict
 
+from .compat import decode2To3, encode2To3, is_str
 from .printer import Printer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-
-# for python 2/3 compatibility
-try:
-    isinstance("", basestring)
-
-    def is_str(s):
-        return isinstance(s, basestring)
-
-    def encode2To3(s):
-        return s
-
-    def decode2To3(s):
-        return s
-
-except NameError:
-
-    def is_str(s):
-        return isinstance(s, str)
-
-    def encode2To3(s):
-        return bytes(s, 'UTF-8')
-
-    def decode2To3(s):
-        return s.decode('UTF-8')
 
 
 class G(object):

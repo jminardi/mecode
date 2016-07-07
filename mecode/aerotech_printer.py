@@ -1,27 +1,5 @@
 import socket
-
-try:
-    isinstance('', basestring)
-
-    def is_str(s):
-        return isinstance(s, basestring)
-
-    def encode2To3(s):
-        return s
-
-    def decode2To3(s):
-        return s
-
-except NameError:
-
-    def is_str(s):
-        return isinstance(s, str)
-
-    def encode2To3(s):
-        return bytes(s, 'UTF-8')
-
-    def decode2To3(s):
-        return s.decode('UTF-8')
+from . import compat
 
 class AerotechPrinter(object):
     """ AerotechPrinter is responsible for communications with a printer via a
@@ -125,4 +103,4 @@ class AerotechPrinter(object):
 
             self._lines_sent_without_reading -= 1
 
-        return decode2To3(line).rstrip(self.EOS)
+        return compat.decode2To3(line).rstrip(self.EOS)
