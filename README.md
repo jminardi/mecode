@@ -103,6 +103,15 @@ rename it.
 
 Installation
 ------------
+
+The easiest method to install mecode is with pip:
+
+```bash
+sudo pip install mecode
+```
+
+To install from source:
+
 ```bash
 $ git clone https://github.com/jminardi/mecode.git
 $ cd mecode
