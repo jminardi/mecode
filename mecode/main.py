@@ -47,7 +47,7 @@ This software was developed by the Lewis Lab at Harvard University.
 
 import math
 import os
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 from .printer import Printer
 
@@ -217,7 +217,7 @@ class G(object):
         >>> g.set_home(0, 0)
 
         """
-        args = self._format_args(x, y, z, **kwargs)
+        args = self._format_args(x, y, z, kwargs)
         self.write('G92 ' + args)
 
         self._update_current_position(mode='absolute', x=x, y=y, z=z, **kwargs)
@@ -335,7 +335,8 @@ class G(object):
         >>> g.move(A=20)
 
         """
-        if self.extrude is True and 'E' not in kwargs.keys():
+        coords = OrderedDict(kwargs)
+        if self.extrude is True and 'E' not in coords.keys():
             if self.is_relative is not True:
                 x_move = self.current_position['x'] if x is None else x
                 y_move = self.current_position['y'] if y is None else y
@@ -351,10 +352,10 @@ class G(object):
                 3.14159*(self.layer_height/2)**2
             volume = line_length*area
             filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier
-            kwargs['E'] = filament_length + current_extruder_position
+            coords['E'] = filament_length + current_extruder_position
 
-        self._update_current_position(x=x, y=y, z=z, **kwargs)
-        args = self._format_args(x, y, z, **kwargs)
+        self._update_current_position(x=x, y=y, z=z, **coords)
+        args = self._format_args(x, y, z, coords)
         self.write('G1 ' + args)
 
     def abs_move(self, x=None, y=None, z=None, **kwargs):
@@ -409,7 +410,7 @@ class G(object):
         >>> g.arc(x=10, y=10, radius=50, helix_dim='A', helix_len=5)
 
         """
-        dims = dict(kwargs)
+        dims = OrderedDict(kwargs)
         if x is not None:
             dims['x'] = x
         if y is not None:
@@ -480,7 +481,7 @@ class G(object):
         if axis is not None:
             self.write('G16 X Y {}'.format(axis))  # coordinate axis assignment
         self.write(plane_selector)
-        args = self._format_args(**dims)
+        args = self._format_args(None, None, None, dims)
         if helix_dim is None:
             self.write('{0} {1} R{2:f}'.format(command, args, radius))
         else:
@@ -887,15 +888,22 @@ class G(object):
                     self.out_fd.writelines(lines)
                     self.out_fd.write(encode2To3('\n'))
 
-    def _format_args(self, x=None, y=None, z=None, **kwargs):
+    def _format_args(self, x=None, y=None, z=None, coords={}):
         args = []
+        coords = coords.copy()
+        if x is None and 'x' in coords:
+            x = coords.pop('x')
+        if y is None and 'y' in coords:
+            y = coords.pop('y')
+        if z is None and 'z' in coords:
+            z = coords.pop('z')
         if x is not None:
             args.append('{0}{1:f}'.format(self.x_axis, x))
         if y is not None:
             args.append('{0}{1:f}'.format(self.y_axis, y))
         if z is not None:
             args.append('{0}{1:f}'.format(self.z_axis, z))
-        args += ['{0}{1:f}'.format(k, v) for k, v in kwargs.items()]
+        args += ['{0}{1:f}'.format(k, v) for k, v in coords.items()]
         args = ' '.join(args)
         return args
 
