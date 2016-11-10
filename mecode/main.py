@@ -885,10 +885,12 @@ class G(object):
                 with open(os.path.join(HERE, 'header.txt')) as fd:
                     lines = fd.readlines()
                     lines = [encode2To3(x.rstrip()+self.lineend) for x in lines]
+                    self.out_fd.writelines(lines)
             if self.header is not None:
                 with open(self.header) as fd:
                     lines = fd.readlines()
                     lines = [encode2To3(x.rstrip()+self.lineend) for x in lines]
+                    self.out_fd.writelines(lines)
 
     def _format_args(self, x=None, y=None, z=None, **kwargs):
         d = self.output_digits
