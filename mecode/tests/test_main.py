@@ -658,6 +658,20 @@ class TestG(TestGFixture):
         self.assert_output()
         self.assert_position({'x': 3, 'y': 4, 'z': 0})
 
+    def test_output_digits(self):
+        self.g.output_digits = 1
+        self.g.move(10)
+        self.expect_cmd("""
+        G1 X10.0
+        """)
+        self.assert_output()
+        self.g.output_digits = 6
+        self.g.move(10)
+        self.expect_cmd("""
+        G1 X10.000000
+        """)
+        self.assert_output()
+
 
 if __name__ == '__main__':
     unittest.main()
