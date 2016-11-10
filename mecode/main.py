@@ -302,19 +302,17 @@ class G(object):
             waits to return until all buffered lines have been acknowledged.
 
         """
-        end = encode2To3(self.lineend)
         if self.out_fd is not None:
             if self.aerotech_include is True:
                 with open(os.path.join(HERE, 'footer.txt')) as fd:
                     lines = fd.readlines()
-                    lines = [encode2To3(x) for x in lines]
-                    [self.out_fd.write(l.rstrip() + end) for l in lines]
+                    lines = [encode2To3(x.rstrip()+self.lineend) for x in lines]
+                    self.out_fd.writelines(lines)
             if self.footer is not None:
                 with open(self.footer) as fd:
                     lines = fd.readlines()
-                    lines = [encode2To3(x) for x in lines]
-                    [self.out_fd.write(l.rstrip() + end) for l in lines]
-                    self.out_fd.write(encode2To3(end))
+                    lines = [encode2To3(x.rstrip()+self.lineend) for x in lines]
+                    self.out_fd.writelines(lines)
             self.out_fd.close()
         if self._socket is not None:
             self._socket.close()
@@ -879,7 +877,6 @@ class G(object):
         return minor / self._meander_passes(minor, spacing)
 
     def _write_header(self):
-        end = encode2To3(self.lineend)
         outfile = self.outfile
         if outfile is not None or self.out_fd is not None:
             if self.out_fd is None:  # open it if it is a path
@@ -887,15 +884,11 @@ class G(object):
             if self.aerotech_include is True:
                 with open(os.path.join(HERE, 'header.txt')) as fd:
                     lines = fd.readlines()
-                    lines = [encode2To3(x) for x in lines]
-                    [self.out_fd.write(l.rstrip() + end) for l in lines]
-                    self.out_fd.write(encode2To3(end))
+                    lines = [encode2To3(x.rstrip()+self.lineend) for x in lines]
             if self.header is not None:
                 with open(self.header) as fd:
                     lines = fd.readlines()
-                    lines = [encode2To3(x) for x in lines]
-                    [self.out_fd.write(l.rstrip() + end) for l in lines]
-                    self.out_fd.write(encode2To3(end))
+                    lines = [encode2To3(x.rstrip()+self.lineend) for x in lines]
 
     def _format_args(self, x=None, y=None, z=None, **kwargs):
         d = self.output_digits
