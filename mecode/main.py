@@ -86,7 +86,8 @@ class G(object):
                  printer_port=8000, baudrate=250000, two_way_comm=True,
                  x_axis='X', y_axis='Y', z_axis='Z', extrude=False,
                  filament_diameter=1.75, layer_height=0.19,
-                 extrusion_width=0.35, extrusion_multiplier=1, setup=True):
+                 extrusion_width=0.35, extrusion_multiplier=1, setup=True,
+                 lineend='\n'):
         """
         Parameters
         ----------
@@ -142,6 +143,8 @@ class G(object):
             command will be multiplied by this number before being applied.
         setup : Bool (default: True)
             Whether or not to automatically call the setup function.
+        lineend : str (default: '\n')
+            Line ending to use when writing to a file or printer.
 
         """
         # string file name
@@ -167,6 +170,7 @@ class G(object):
         self.x_axis = x_axis
         self.y_axis = y_axis
         self.z_axis = z_axis
+        self.lineend = lineend
 
         self._current_position = defaultdict(float)
         self.is_relative = True
@@ -298,18 +302,19 @@ class G(object):
             waits to return until all buffered lines have been acknowledged.
 
         """
+        end = self.lineend
         if self.out_fd is not None:
             if self.aerotech_include is True:
                 with open(os.path.join(HERE, 'footer.txt')) as fd:
                     lines = fd.readlines()
                     lines = [encode2To3(x) for x in lines]
-                    self.out_fd.writelines(lines)
+                    [self.out_fd.write(l.rstrip() + end) for l in lines]
             if self.footer is not None:
                 with open(self.footer) as fd:
                     lines = fd.readlines()
                     lines = [encode2To3(x) for x in lines]
-                    self.out_fd.writelines(lines)
-                    self.out_fd.write(encode2To3('\n'))
+                    [self.out_fd.write(l.rstrip() + end) for l in lines]
+                    self.out_fd.write(encode2To3(end))
             self.out_fd.close()
         if self._socket is not None:
             self._socket.close()
@@ -816,7 +821,7 @@ class G(object):
     def write(self, statement_in, resp_needed=False):
         if self.print_lines:
             print(statement_in)
-        statement = encode2To3(statement_in + '\n')
+        statement = encode2To3(statement_in + self.lineend)
         if self.out_fd is not None:
             self.out_fd.write(statement)
         if self.direct_write is True:
@@ -874,6 +879,7 @@ class G(object):
         return minor / self._meander_passes(minor, spacing)
 
     def _write_header(self):
+        end = self.lineend
         outfile = self.outfile
         if outfile is not None or self.out_fd is not None:
             if self.out_fd is None:  # open it if it is a path
@@ -882,14 +888,14 @@ class G(object):
                 with open(os.path.join(HERE, 'header.txt')) as fd:
                     lines = fd.readlines()
                     lines = [encode2To3(x) for x in lines]
-                    self.out_fd.writelines(lines)
-                    self.out_fd.write(encode2To3('\n'))
+                    [self.out_fd.write(l.rstrip() + end) for l in lines]
+                    self.out_fd.write(encode2To3(end))
             if self.header is not None:
                 with open(self.header) as fd:
                     lines = fd.readlines()
                     lines = [encode2To3(x) for x in lines]
-                    self.out_fd.writelines(lines)
-                    self.out_fd.write(encode2To3('\n'))
+                    [self.out_fd.write(l.rstrip() + end) for l in lines]
+                    self.out_fd.write(encode2To3(end))
 
     def _format_args(self, x=None, y=None, z=None, **kwargs):
         d = self.output_digits
