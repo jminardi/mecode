@@ -302,7 +302,7 @@ class G(object):
             waits to return until all buffered lines have been acknowledged.
 
         """
-        end = self.lineend
+        end = encode2To3(self.lineend)
         if self.out_fd is not None:
             if self.aerotech_include is True:
                 with open(os.path.join(HERE, 'footer.txt')) as fd:
@@ -879,7 +879,7 @@ class G(object):
         return minor / self._meander_passes(minor, spacing)
 
     def _write_header(self):
-        end = self.lineend
+        end = encode2To3(self.lineend)
         outfile = self.outfile
         if outfile is not None or self.out_fd is not None:
             if self.out_fd is None:  # open it if it is a path
