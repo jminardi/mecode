@@ -39,9 +39,9 @@ the `view()` method ::
     g.view()
 
 * *Author:* Jack Minardi
-* *Email:* jminardi@seas.harvard.edu
+* *Email:* jack@minardi.org
 
-This software was developed by the Lewis Lab at Harvard University.
+This software was developed by the Lewis Lab at Harvard University and Voxel8 Inc.
 
 """
 
@@ -81,7 +81,7 @@ except NameError:
 class G(object):
 
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
-                 aerotech_include=True, direct_write=False,
+                 aerotech_include=True, output_digits=6, direct_write=False,
                  direct_write_mode='socket', printer_host='localhost',
                  printer_port=8000, baudrate=250000, two_way_comm=True,
                  x_axis='X', y_axis='Y', z_axis='Z', extrude=False,
@@ -103,6 +103,8 @@ class G(object):
             of the output file.
         aerotech_include : bool (default: True)
             If true, add aerotech specific functions and var defs to outfile.
+        output_digits : int (default: 6)
+            How many digits to include after the decimal in the output gcode.
         direct_write : bool (default: False)
             If True a socket or serial port is opened to the printer and the
             GCode is sent directly over.
@@ -155,6 +157,7 @@ class G(object):
         self.header = header
         self.footer = footer
         self.aerotech_include = aerotech_include
+        self.output_digits = output_digits
         self.direct_write = direct_write
         self.direct_write_mode = direct_write_mode
         self.printer_host = printer_host
@@ -482,10 +485,11 @@ class G(object):
         self.write(plane_selector)
         args = self._format_args(**dims)
         if helix_dim is None:
-            self.write('{0} {1} R{2:f}'.format(command, args, radius))
+            self.write('{0} {1} R{2:.{digits}f}'.format(command, args, radius,
+                                                        digits=self.output_digits))
         else:
-            self.write('{0} {1} R{2:f} G1 {3}{4}'.format(command, args, radius,
-                                                  helix_dim.upper(), helix_len))
+            self.write('{0} {1} R{2:.{digits}f} G1 {3}{4}'.format(
+                command, args, radius, helix_dim.upper(), helix_len, digits=self.output_digits))
             dims[helix_dim] = helix_len
 
         self._update_current_position(**dims)
@@ -888,14 +892,15 @@ class G(object):
                     self.out_fd.write(encode2To3('\n'))
 
     def _format_args(self, x=None, y=None, z=None, **kwargs):
+        d = self.output_digits
         args = []
         if x is not None:
-            args.append('{0}{1:f}'.format(self.x_axis, x))
+            args.append('{0}{1:.{digits}f}'.format(self.x_axis, x, digits=d))
         if y is not None:
-            args.append('{0}{1:f}'.format(self.y_axis, y))
+            args.append('{0}{1:.{digits}f}'.format(self.y_axis, y, digits=d))
         if z is not None:
-            args.append('{0}{1:f}'.format(self.z_axis, z))
-        args += ['{0}{1:f}'.format(k, v) for k, v in kwargs.items()]
+            args.append('{0}{1:.{digits}f}'.format(self.z_axis, z, digits=d))
+        args += ['{0}{1:.{digits}f}'.format(k, v, digits=d) for k, v in kwargs.items()]
         args = ' '.join(args)
         return args
 
