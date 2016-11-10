@@ -132,6 +132,12 @@ visualization. An easy way to install them is to use
 [0]: https://www.enthought.com/products/canopy/
 [1]: https://store.continuum.io/cshop/anaconda/
 
+Testing
+-------
+Run the tests:
+
+    python setup.py test
+
 TODO
 ----
 * add pressure box comport to `__init__()` method

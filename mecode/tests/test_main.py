@@ -112,10 +112,14 @@ class TestG(TestGFixture):
         self.assert_output()
 
     def test_setup(self):
+        # Clean up what was automatically set up.
+        self.tearDown()
+
         self.outfile = TemporaryFile()
         self.g = G(outfile=self.outfile, print_lines=False)
         self.expected = ""
-        self.expect_cmd(open(os.path.join(HERE, '../header.txt')).read())
+        with open(os.path.join(HERE, '../header.txt')) as f:
+            self.expect_cmd(f.read())
         self.expect_cmd('G91')
         self.assert_output()
 

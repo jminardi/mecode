@@ -1,5 +1,11 @@
+#! /usr/bin/env python
+
 import unittest
-from mock import Mock
+try:
+    from mock import Mock
+except ImportError:
+    # mock is in the standard library as of python 3.3.
+    from unittest.mock import Mock
 import os
 from time import sleep
 from threading import Thread
