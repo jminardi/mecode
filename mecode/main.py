@@ -367,6 +367,29 @@ class G(object):
         else:
             self.move(x=x, y=y, z=z, **kwargs)
 
+    def rapid_move(self, x=None, y=None, z=None, **kwargs):
+        """ Functions similairly to 'move' method, but utilizes the rapid linear
+        motion g-code 'G0'. In this mode, all axes move at their fastest feedrate
+        which can result in unexpected non-interpolated motion as a combination of 
+        multiple straight paths. A common mistake it moving in the horizontal plane 
+        much faster than vertically resulting in a crash coming out of a pocket.
+        Extrusion becomes unpredictable and machine dependent, thus is not used in 
+        a rapid move.
+        """
+        self._update_current_position(x=x, y=y, z=z, **kwargs)
+        args = self._format_args(x, y, z, **kwargs)
+        self.write('G0 ' + args)
+
+    def rapid_abs_move(self, x=None, y=None, z=None, **kwargs):
+        """ Same as 'rapid_move' method, but positions are interpreted as absolute.
+        """
+        if self.is_relative:
+            self.absolute()
+            self.rapid_move(x=x, y=y, z=z, **kwargs)
+            self.relative()
+        else:
+            self.rapid_move(x=x, y=y, z=z, **kwargs)
+
     def retract(self, retraction):
         if self.extrude is False:
             self.move(E = -retraction)

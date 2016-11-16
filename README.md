@@ -68,6 +68,8 @@ All methods have detailed docstrings and examples.
 * `home()`
 * `move()`
 * `abs_move()`
+* `rapid_move()`
+* `rapid_abs_move()`
 * `arc()`
 * `abs_arc()`
 * `rect()`
