@@ -912,7 +912,7 @@ class G(object):
             args.append('{0}{1:.{digits}f}'.format(self.y_axis, y, digits=d))
         if z is not None:
             args.append('{0}{1:.{digits}f}'.format(self.z_axis, z, digits=d))
-        args += ['{0}{1:.{digits}f}'.format(k, v, digits=d) for k, v in kwargs.items()]
+        args += ['{0}{1:.{digits}f}'.format(k, kwargs[k], digits=d) for k in sorted(kwargs)]
         args = ' '.join(args)
         return args
 
