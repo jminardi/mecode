@@ -172,7 +172,7 @@ class G(object):
         self.x_axis = x_axis
         self.y_axis = y_axis
         self.z_axis = z_axis
-        if lineend = 'os':
+        if lineend == 'os':
             self._open_as_binary = False
             self.lineend = '\n'
         else:
