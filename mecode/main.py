@@ -331,7 +331,7 @@ class G(object):
         """
         self.abs_move(x=0, y=0)
 
-    def move(self, x=None, y=None, z=None, **kwargs):
+    def move(self, x=None, y=None, z=None, rapid=False, **kwargs):
         """ Move the tool head to the given position. This method operates in
         relative mode unless a manual call to `absolute` was given previously.
         If an absolute movement is desired, the `abs_move` method is
@@ -368,17 +368,28 @@ class G(object):
 
         self._update_current_position(x=x, y=y, z=z, **kwargs)
         args = self._format_args(x, y, z, **kwargs)
-        self.write('G1 ' + args)
+        cmd = 'G0 ' if rapid else 'G1 '
+        self.write(cmd + args)
 
-    def abs_move(self, x=None, y=None, z=None, **kwargs):
+    def abs_move(self, x=None, y=None, z=None, rapid=False, **kwargs):
         """ Same as `move` method, but positions are interpreted as absolute.
         """
         if self.is_relative:
             self.absolute()
-            self.move(x=x, y=y, z=z, **kwargs)
+            self.move(x=x, y=y, z=z, rapid=rapid, **kwargs)
             self.relative()
         else:
-            self.move(x=x, y=y, z=z, **kwargs)
+            self.move(x=x, y=y, z=z, rapid=rapid, **kwargs)
+
+    def rapid(self, x=None, y=None, z=None, **kwargs):
+        """ Executes an uncoordinated move to the specified location.
+        """
+        self.move(x, y, z, rapid=True, **kwargs)
+
+    def abs_rapid(self, x=None, y=None, z=None, **kwargs):
+        """ Executes an uncoordinated abs move to the specified location.
+        """
+        self.abs_move(x, y, z, rapid=True, **kwargs)
 
     def retract(self, retraction):
         if self.extrude is False:
@@ -909,7 +920,7 @@ class G(object):
             args.append('{0}{1:.{digits}f}'.format(self.y_axis, y, digits=d))
         if z is not None:
             args.append('{0}{1:.{digits}f}'.format(self.z_axis, z, digits=d))
-        args += ['{0}{1:.{digits}f}'.format(k, v, digits=d) for k, v in kwargs.items()]
+        args += ['{0}{1:.{digits}f}'.format(k, kwargs[k], digits=d) for k in sorted(kwargs)]
         args = ' '.join(args)
         return args
 

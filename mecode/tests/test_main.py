@@ -189,7 +189,7 @@ class TestG(TestGFixture):
         self.assert_position({'x': 40.0, 'y': 40.0, 'A': 50, 'Z': 10, 'z':0.0,
                                 'E': 1.4244176984302641})
         self.expect_cmd("""
-        G1 Z10.000000 E0.000000
+        G1 E0.000000 Z10.000000
         """)
         self.assert_output()
 
@@ -198,7 +198,7 @@ class TestG(TestGFixture):
                             'E': 1.4244176984302641})
         self.expect_cmd("""
         G90
-        G1 Z20.000000 E1.424418
+        G1 E1.424418 Z20.000000
         G91
         """)
         self.assert_output()
