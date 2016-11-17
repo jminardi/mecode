@@ -87,7 +87,7 @@ class G(object):
                  x_axis='X', y_axis='Y', z_axis='Z', extrude=False,
                  filament_diameter=1.75, layer_height=0.19,
                  extrusion_width=0.35, extrusion_multiplier=1, setup=True,
-                 lineend='\n'):
+                 lineend='os'):
         """
         Parameters
         ----------
@@ -143,8 +143,10 @@ class G(object):
             command will be multiplied by this number before being applied.
         setup : Bool (default: True)
             Whether or not to automatically call the setup function.
-        lineend : str (default: '\n')
-            Line ending to use when writing to a file or printer.
+        lineend : str (default: 'os')
+            Line ending to use when writing to a file or printer. The special
+            value 'os' can be passed to fall back on python's automatic
+            lineending insertion.
 
         """
         # string file name
@@ -170,7 +172,12 @@ class G(object):
         self.x_axis = x_axis
         self.y_axis = y_axis
         self.z_axis = z_axis
-        self.lineend = lineend
+        if lineend = 'os':
+            self._open_as_binary = False
+            self.lineend = '\n'
+        else:
+            self._open_as_binary = True
+            self.lineend = lineend
 
         self._current_position = defaultdict(float)
         self.is_relative = True
@@ -880,7 +887,8 @@ class G(object):
         outfile = self.outfile
         if outfile is not None or self.out_fd is not None:
             if self.out_fd is None:  # open it if it is a path
-                self.out_fd = open(outfile, 'w+')
+                mode = 'wb+' if self._open_as_binary else 'w+'
+                self.out_fd = open(outfile, mode)
             if self.aerotech_include is True:
                 with open(os.path.join(HERE, 'header.txt')) as fd:
                     lines = fd.readlines()
