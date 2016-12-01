@@ -661,9 +661,11 @@ class G(object):
             minor_feed = self.speed
         for _ in range(int(self._meander_passes(minor, spacing))):
             self.move(**{major_name: (sign * major)})
-            self.feed(minor_feed)
+            if minor_feed != major_feed:
+                self.feed(minor_feed)
             self.move(**{minor_name: spacing})
-            self.feed(major_feed)
+            if minor_feed != major_feed:
+                self.feed(major_feed)
             sign = -1 * sign
         if tail is False:
             self.move(**{major_name: (sign * major)})
