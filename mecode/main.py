@@ -592,7 +592,8 @@ class G(object):
                 self.move(y=-y)
                 self.move(x=x)
 
-    def meander(self, x, y, spacing, start='LL', orientation='x', tail=False):
+    def meander(self, x, y, spacing, start='LL', orientation='x', tail=False,
+                minor_feed=None):
         """ Infill a rectangle with a square wave meandering pattern. If the
         relevant dimension is not a multiple of the spacing, the spacing will
         be tweaked to ensure the dimensions work out.
@@ -609,6 +610,10 @@ class G(object):
             The start of the meander -  L/U = lower/upper, L/R = left/right
             This assumes an origin in the lower left.
         orientation : str ('x' or 'y') (default: 'x')
+        tail : Bool (default: False)
+            Whether or not to terminate the meander in the minor axis
+        minor_feed : float or None (default: None)
+            Feed rate to use in the minor axis
 
         Examples
         --------
@@ -651,9 +656,16 @@ class G(object):
         else:
             was_absolute = False
 
+        major_feed = self.speed
+        if not minor_feed:
+            minor_feed = self.speed
         for _ in range(int(self._meander_passes(minor, spacing))):
             self.move(**{major_name: (sign * major)})
+            if minor_feed != major_feed:
+                self.feed(minor_feed)
             self.move(**{minor_name: spacing})
+            if minor_feed != major_feed:
+                self.feed(major_feed)
             sign = -1 * sign
         if tail is False:
             self.move(**{major_name: (sign * major)})
