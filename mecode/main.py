@@ -149,15 +149,7 @@ class G(object):
             lineending insertion.
 
         """
-        # string file name
-        self.outfile = outfile if is_str(outfile) else None
-        # file descriptor
-        if not is_str(outfile) and outfile is not None:
-            # assume arg outfile is passed in a file descriptor
-            self.out_fd = outfile
-        else:
-            self.out_fd = None
-
+        self.outfile = outfile
         self.print_lines = print_lines
         self.header = header
         self.footer = footer
@@ -172,12 +164,6 @@ class G(object):
         self.x_axis = x_axis
         self.y_axis = y_axis
         self.z_axis = z_axis
-        if lineend == 'os':
-            self._open_as_binary = False
-            self.lineend = '\n'
-        else:
-            self._open_as_binary = True
-            self.lineend = lineend
 
         self._current_position = defaultdict(float)
         self.is_relative = True
@@ -194,6 +180,23 @@ class G(object):
 
         self._socket = None
         self._p = None
+
+        # If the user passes in a line ending then we need to open the output
+        # file in binary mode, otherwise python will try to be smart and
+        # convert line endings in a platform dependent way.
+        if lineend == 'os':
+            mode = 'w+'
+            self.lineend = '\n'
+        else:
+            mode = 'wb+'
+            self.lineend = lineend
+
+        if is_str(outfile):
+            self.out_fd = open(outfile, mode)
+        elif outfile is not None:  # if outfile not str assume it is an open file
+            self.out_fd = outfile
+        else:
+            self.out_fd = None
 
         if setup:
             self.setup()
@@ -312,14 +315,10 @@ class G(object):
         if self.out_fd is not None:
             if self.aerotech_include is True:
                 with open(os.path.join(HERE, 'footer.txt')) as fd:
-                    lines = fd.readlines()
-                    lines = [encode2To3(x.rstrip()+self.lineend) for x in lines]
-                    self.out_fd.writelines(lines)
+                    self._write_out(lines=fd.readlines())
             if self.footer is not None:
                 with open(self.footer) as fd:
-                    lines = fd.readlines()
-                    lines = [encode2To3(x.rstrip()+self.lineend) for x in lines]
-                    self.out_fd.writelines(lines)
+                    self._write_out(lines=fd.readlines())
             self.out_fd.close()
         if self._socket is not None:
             self._socket.close()
@@ -849,9 +848,8 @@ class G(object):
     def write(self, statement_in, resp_needed=False):
         if self.print_lines:
             print(statement_in)
+        self._write_out(statement_in)
         statement = encode2To3(statement_in + self.lineend)
-        if self.out_fd is not None:
-            self.out_fd.write(statement)
         if self.direct_write is True:
             if self.direct_write_mode == 'socket':
                 if self._socket is None:
@@ -896,6 +894,23 @@ class G(object):
 
     # Private Interface  ######################################################
 
+    def _write_out(self, line=None, lines=None):
+        """ Writes given `line` or `lines` to the output file.
+        """
+        # Only write if user requested an output file.
+        if self.out_fd is None:
+            return
+
+        if lines is not None:
+            for line in lines:
+                self._write_out(line)
+
+        line = line.rstrip() + self.lineend  # add lineend character
+        if 'b' in self.out_fd.mode:  # encode the string to binary if needed
+            line = encode2To3(line)
+        self.out_fd.write(line)
+
+
     def _meander_passes(self, minor, spacing):
         if minor > 0:
             passes = math.ceil(minor / spacing)
@@ -907,21 +922,12 @@ class G(object):
         return minor / self._meander_passes(minor, spacing)
 
     def _write_header(self):
-        outfile = self.outfile
-        if outfile is not None or self.out_fd is not None:
-            if self.out_fd is None:  # open it if it is a path
-                mode = 'wb+' if self._open_as_binary else 'w+'
-                self.out_fd = open(outfile, mode)
-            if self.aerotech_include is True:
-                with open(os.path.join(HERE, 'header.txt')) as fd:
-                    lines = fd.readlines()
-                    lines = [encode2To3(x.rstrip()+self.lineend) for x in lines]
-                    self.out_fd.writelines(lines)
-            if self.header is not None:
-                with open(self.header) as fd:
-                    lines = fd.readlines()
-                    lines = [encode2To3(x.rstrip()+self.lineend) for x in lines]
-                    self.out_fd.writelines(lines)
+        if self.aerotech_include is True:
+            with open(os.path.join(HERE, 'header.txt')) as fd:
+                self._write_out(lines=fd.readlines())
+        if self.header is not None:
+            with open(self.header) as fd:
+                self._write_out(lines=fd.readlines())
 
     def _format_args(self, x=None, y=None, z=None, **kwargs):
         d = self.output_digits

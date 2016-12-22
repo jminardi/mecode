@@ -20,7 +20,7 @@ class TestGFixture(unittest.TestCase):
         return G
 
     def setUp(self):
-        self.outfile = TemporaryFile()
+        self.outfile = TemporaryFile('w+')
         self.g = self.getGClass()(outfile=self.outfile, print_lines=False,
                    aerotech_include=False)
         self.expected = ""
@@ -47,7 +47,9 @@ class TestGFixture(unittest.TestCase):
         self.expected = [x.strip() for x in self.expected if x.strip()]
         self.outfile.seek(0)
         lines = self.outfile.readlines()
-        lines = [decode2To3(x).strip() for x in lines if x.strip()]
+        if 'b' in self.outfile.mode:
+            lines = [decode2To3(x) for x in lines]
+        lines = [x.strip() for x in lines if x.strip()]
         self.assertListEqual(lines, self.expected)
         self.expected = string_rep
 
@@ -112,10 +114,13 @@ class TestG(TestGFixture):
         self.assert_output()
 
     def test_setup(self):
+        self.outfile.close()
         self.outfile = TemporaryFile()
         self.g = G(outfile=self.outfile, print_lines=False)
         self.expected = ""
-        self.expect_cmd(open(os.path.join(HERE, '../header.txt')).read())
+        with open(os.path.join(HERE, '../header.txt')) as f:
+            lines = f.read()
+        self.expect_cmd(lines)
         self.expect_cmd('G91')
         self.assert_output()
 
@@ -671,6 +676,16 @@ class TestG(TestGFixture):
         G1 X10.000000
         """)
         self.assert_output()
+
+    def test_open_in_binary(self):
+        outfile = TemporaryFile('wb+')
+        g = self.getGClass()(outfile=outfile, print_lines=False,
+                   aerotech_include=False)
+        g.move(10,10)
+        outfile.seek(0)
+        lines = outfile.readlines()
+        assert(type(lines[0]) == bytes)
+        outfile.close()
 
 
 if __name__ == '__main__':
