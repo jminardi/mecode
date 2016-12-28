@@ -251,6 +251,74 @@ class TestG(TestGFixture):
         self.assert_position({'x': 19, 'y': 18, 'D': 6, 'z': 5})
         self.g.relative()
 
+    def test_rapid(self):
+        self.g.rapid(10, 10)
+        self.assert_position({'x': 10.0, 'y': 10.0, 'z': 0})
+        self.g.rapid(10, 10, A=50)
+        self.assert_position({'x': 20.0, 'y': 20.0, 'A': 50, 'z': 0})
+        self.g.rapid(10, 10, 10)
+        self.assert_position({'x': 30.0, 'y': 30.0, 'A': 50, 'z': 10})
+        self.expect_cmd("""
+        G0 X10.000000 Y10.000000
+        G0 X10.000000 Y10.000000 A50.000000
+        G0 X10.000000 Y10.000000 Z10.000000
+        """)
+        self.assert_output()
+
+        self.g.abs_rapid(20, 20, 0)
+        self.expect_cmd("""
+        G90
+        G0 X20.000000 Y20.000000 Z0.000000
+        G91
+        """)
+        self.assert_output()
+
+        self.g.rapid(x=10)
+        self.assert_position({'x': 30.0, 'y': 20.0, 'A':50, 'z': 0})
+        self.expect_cmd("""
+        G0 X10.000000
+        """)
+        self.assert_output()
+
+    def test_abs_rapid(self):
+        self.g.relative()
+        self.g.abs_rapid(10, 10)
+        self.expect_cmd("""
+        G90
+        G0 X10.000000 Y10.000000
+        G91
+        """)
+        self.assert_output()
+        self.assert_position({'x': 10, 'y': 10, 'z': 0})
+
+        self.g.abs_rapid(5, 5, 5)
+        self.expect_cmd("""
+        G90
+        G0 X5.000000 Y5.000000 Z5.000000
+        G91
+        """)
+        self.assert_output()
+        self.assert_position({'x': 5, 'y': 5, 'z': 5})
+
+        self.g.abs_rapid(15, 0, D=5)
+        self.expect_cmd("""
+        G90
+        G0 X15.000000 Y0.000000 D5.000000
+        G91
+        """)
+        self.assert_output()
+        self.assert_position({'x': 15, 'y': 0, 'D': 5, 'z': 5})
+
+        self.g.absolute()
+        self.g.abs_rapid(19, 18, D=6)
+        self.expect_cmd("""
+        G90
+        G0 X19.000000 Y18.000000 D6.000000
+        """)
+        self.assert_output()
+        self.assert_position({'x': 19, 'y': 18, 'D': 6, 'z': 5})
+        self.g.relative()
+
     def test_arc(self):
         with self.assertRaises(RuntimeError):
             self.g.arc()
