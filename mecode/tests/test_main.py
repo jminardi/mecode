@@ -203,6 +203,51 @@ class TestG(TestGFixture):
         """)
         self.assert_output()
 
+    def test_rapid_move(self):
+        self.g.rapid_move(10, 10)
+        self.assert_position({'x': 10.0, 'y': 10.0, 'z': 0})
+        self.g.rapid_move(10, 10, A=50)
+        self.assert_position({'x': 20.0, 'y': 20.0, 'A': 50, 'z': 0})
+        self.g.rapid_move(10, 10, 10)
+        self.assert_position({'x': 30.0, 'y': 30.0, 'A': 50, 'z': 10})
+        self.expect_cmd("""
+        G0 X10.000000 Y10.000000
+        G0 X10.000000 Y10.000000 A50.000000
+        G0 X10.000000 Y10.000000 Z10.000000
+        """)
+        self.assert_output()
+
+        self.g.rapid_abs_move(20, 20, 0)
+        self.expect_cmd("""
+        G90
+        G0 X20.000000 Y20.000000 Z0.000000
+        G91
+        """)
+        self.assert_output()
+
+        #test that extrusion does not output in rapid movement
+        self.g.extrude = True
+        self.g.layer_height = 0.22
+        self.g.extrusion_width = 0.4
+        self.g.filament_diameter = 1.75
+        self.g.extrusion_multiplier = 1
+        self.g.rapid_abs_move(x=30, y=30)
+        self.assert_position({'x': 30.0, 'y': 30.0, 'z': 0.0, 'A': 50.0})
+        self.expect_cmd("""
+        G90
+        G0 X30.000000 Y30.000000
+        G91
+        """)
+
+        self.assert_output()
+
+        self.g.rapid_move(x=10)
+        self.assert_position({'x': 40.0, 'y': 30.0, 'A':50, 'z': 0})
+        self.expect_cmd("""
+        G0 X10.000000
+        """)
+        self.assert_output()
+
     def test_retraction(self):
         g=self.g
         g.retract(retraction = 5)
@@ -246,6 +291,45 @@ class TestG(TestGFixture):
         self.expect_cmd("""
         G90
         G1 X19.000000 Y18.000000 D6.000000
+        """)
+        self.assert_output()
+        self.assert_position({'x': 19, 'y': 18, 'D': 6, 'z': 5})
+        self.g.relative()
+
+    def test_rapid_abs_move(self):
+        self.g.relative()
+        self.g.rapid_abs_move(10, 10)
+        self.expect_cmd("""
+        G90
+        G0 X10.000000 Y10.000000
+        G91
+        """)
+        self.assert_output()
+        self.assert_position({'x': 10, 'y': 10, 'z': 0})
+
+        self.g.rapid_abs_move(5, 5, 5)
+        self.expect_cmd("""
+        G90
+        G0 X5.000000 Y5.000000 Z5.000000
+        G91
+        """)
+        self.assert_output()
+        self.assert_position({'x': 5, 'y': 5, 'z': 5})
+
+        self.g.rapid_abs_move(15, 0, D=5)
+        self.expect_cmd("""
+        G90
+        G0 X15.000000 Y0.000000 D5.000000
+        G91
+        """)
+        self.assert_output()
+        self.assert_position({'x': 15, 'y': 0, 'D': 5, 'z': 5})
+
+        self.g.absolute()
+        self.g.rapid_abs_move(19, 18, D=6)
+        self.expect_cmd("""
+        G90
+        G0 X19.000000 Y18.000000 D6.000000
         """)
         self.assert_output()
         self.assert_position({'x': 19, 'y': 18, 'D': 6, 'z': 5})
