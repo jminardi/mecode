@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 INFO = {'name': 'mecode',
-        'version': '0.2.8',
+        'version': '0.2.9',
         'description': 'Simple GCode generator',
         'author': 'Jack Minardi',
         'author_email': 'jack@minardi.org',
