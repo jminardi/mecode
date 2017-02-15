@@ -64,7 +64,7 @@ class AerotechPrinter(object):
         """
         if not line.endswith(self.EOS):
             line += self.EOS
-        self._socket.sendall(line)
+        self._socket.sendall(compat.encode2To3(line))
 
         self._lines_sent_without_reading += 1
 
