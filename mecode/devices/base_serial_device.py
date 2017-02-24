@@ -1,10 +1,17 @@
+import platform
 import serial
 
 
 class BaseSerialDevice(object):
 
-    def __init__(self, comport='COM5', baud=115200):
-        self.comport = comport
+    def __init__(self, comport=None, baud=115200):
+        if comport is None:
+            if 'Windows' in platform.system():
+                self.comport = 'COM5'
+            else:
+                self.comport = '/dev/ttyUSB0'
+        else:
+            self.comport = comport
         self.baud = baud
         self.connect()
 

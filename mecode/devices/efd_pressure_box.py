@@ -1,3 +1,4 @@
+import platform
 import serial
 
 STX = '\x02'  #Packet Start
@@ -10,8 +11,14 @@ EOT = '\x04'  #End Of Transmission
 
 class EFDPressureBox(object):
     
-    def __init__(self, comport='COM4'):
-        self.comport = comport
+    def __init__(self, comport=None):
+        if comport is None:
+            if 'Windows' in platform.system():
+                self.comport = 'COM4'
+            else:
+                self.comport = '/dev/ttyUSB0'
+        else:
+            self.comport = comport
         self.connect()
         
     def connect(self):
