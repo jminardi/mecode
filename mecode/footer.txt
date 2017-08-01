@@ -2,7 +2,7 @@
 
 M2
 
-;##########Functions############;
+;##########Nordson Pressure Box Functions############;
 DFS setPress        
          
         $strtask1 = DBLTOSTR( $P, 0 )            
@@ -169,4 +169,69 @@ DFS togglePress
         FILECLOSE $hFile
         G4 P0.15
 
+ENDDFS
+
+;##########Omnicure Functions############;
+DFS omniOn
+
+        $strtask1 = DBLTOSTR( $P, 0 )
+        $strtask1 = "COM" + $strtask1
+        $hFile = FILEOPEN $strtask1, 2
+        COMMINIT $hFile, "baud=19200 parity=N data=8 stop=1"
+        COMMSETTIMEOUT $hFile, -1, -1, 1000
+                
+                FILEWRITE $hFile "CONN18"
+                FILEREAD $hFile, 0, $strtask2
+                WHILE STRCMP($strtask2,"READY0A",0)
+                        FILEWRITE $hFile "CONN18"
+                                FILEREAD $hFile, 0, $strtask2
+                ENDWHILE
+                
+                FILEWRITE $hFile "OPN40"
+                FILEREAD $hFile, 0, $strtask2
+                WHILE STRCMP($strtask2,"ReceivedBF",0)
+                        FILEWRITE $hFile "OPN40"
+                                FILEREAD $hFile, 0, $strtask2
+                ENDWHILE
+                
+                FILEWRITE $hFile "DCONE1"
+                FILEREAD $hFile, 0, $strtask2
+                WHILE STRCMP($strtask2,"CLOSED42",0)
+                        FILEWRITE $hFile "DCONE1"
+                                FILEREAD $hFile, 0, $strtask2
+                ENDWHILE
+                FILECLOSE $hFile
+
+ENDDFS
+
+DFS omniOff
+
+        $strtask1 = DBLTOSTR( $P, 0 )
+        $strtask1 = "COM" + $strtask1
+        $hFile = FILEOPEN $strtask1, 2
+        COMMINIT $hFile, "baud=19200 parity=N data=8 stop=1"
+        COMMSETTIMEOUT $hFile, -1, -1, 1000
+                
+                FILEWRITE $hFile "CONN18"
+                FILEREAD $hFile, 0, $strtask2
+                WHILE STRCMP($strtask2,"READY0A",0)
+                        FILEWRITE $hFile "CONN18"
+                                FILEREAD $hFile, 0, $strtask2
+                ENDWHILE
+                
+                FILEWRITE $hFile "CLS3A"
+                FILEREAD $hFile, 0, $strtask2
+                WHILE STRCMP($strtask2,"ReceivedBF",0)
+                        FILEWRITE $hFile "CLS3A"
+                                FILEREAD $hFile, 0, $strtask2
+                ENDWHILE
+                
+                FILEWRITE $hFile "DCONE1"
+                FILEREAD $hFile, 0, $strtask2
+                WHILE STRCMP($strtask2,"CLOSED42",0)
+                        FILEWRITE $hFile "DCONE1"
+                                FILEREAD $hFile, 0, $strtask2
+                ENDWHILE
+                FILECLOSE $hFile
+        
 ENDDFS

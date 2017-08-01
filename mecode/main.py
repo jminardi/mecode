@@ -914,6 +914,12 @@ class G(object):
     def set_valve(self, num, value):
         self.write('$DO{}.0={}'.format(num, value))
 
+    def omni_on(self, com_port):
+        self.write('Call omniOn P{}'.format(com_port))
+
+    def omni_off(self, com_port):
+        self.write('Call omniOff P{}'.format(com_port))
+
     # Public Interface  #######################################################
 
     def view(self, backend='matplotlib'):
