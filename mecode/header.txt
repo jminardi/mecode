@@ -5,6 +5,8 @@ DVAR $length
 DVAR $lame
 DVAR $comport
 DVAR $vacpress
+DVAR $alicatID
+DVAR $omniIntVal
 
 $DO0.0=0
 $DO1.0=0
