@@ -808,6 +808,29 @@ class G(object):
     def omni_off(self, com_port):
         self.write('Call omniOff P{}'.format(com_port))
 
+    def omni_intensity(self, com_port, value):
+        command = 'SIL{}'.format(value)
+        data = self.calc_CRC8(command)
+        self.write('$omniIntVal="{}"'.format(data))
+        self.write('Call omniSetInt P{}'.format(com_port))
+
+    def set_alicat_pressure(self,com_port,value):
+        self.write('Call setAlicatPress P{} Q{}'.format(com_port, value))
+
+    def calc_CRC8(self,data):
+        CRC8 = 0
+        for letter in list(bytearray(data)):
+            for i in range(8):
+                if (letter^CRC8)&0x01:
+                    CRC8 ^= 0x18
+                    CRC8 >>= 1
+                    CRC8 |= 0x80
+                else:
+                    CRC8 >>= 1
+                letter >>= 1
+        return data +'{:02X}\r'.format(CRC8)
+
+
     # Public Interface  #######################################################
 
     def view(self, backend='mayavi'):
