@@ -180,27 +180,27 @@ DFS omniOn
         COMMINIT $hFile, "baud=19200 parity=N data=8 stop=1"
         COMMSETTIMEOUT $hFile, -1, -1, 1000
                 
+        FILEWRITE $hFile "CONN18"
+        FILEREAD $hFile, 0, $strtask2
+        WHILE STRCMP($strtask2,"READY0A",0)
                 FILEWRITE $hFile "CONN18"
                 FILEREAD $hFile, 0, $strtask2
-                WHILE STRCMP($strtask2,"READY0A",0)
-                        FILEWRITE $hFile "CONN18"
-                        FILEREAD $hFile, 0, $strtask2
-                ENDWHILE
-                
+        ENDWHILE
+        
+        FILEWRITE $hFile "OPN40"
+        FILEREAD $hFile, 0, $strtask2
+        WHILE STRCMP($strtask2,"ReceivedBF",0)
                 FILEWRITE $hFile "OPN40"
                 FILEREAD $hFile, 0, $strtask2
-                WHILE STRCMP($strtask2,"ReceivedBF",0)
-                        FILEWRITE $hFile "OPN40"
-                        FILEREAD $hFile, 0, $strtask2
-                ENDWHILE
-                
+        ENDWHILE
+        
+        FILEWRITE $hFile "DCONE1"
+        FILEREAD $hFile, 0, $strtask2
+        WHILE STRCMP($strtask2,"CLOSED42",0)
                 FILEWRITE $hFile "DCONE1"
                 FILEREAD $hFile, 0, $strtask2
-                WHILE STRCMP($strtask2,"CLOSED42",0)
-                        FILEWRITE $hFile "DCONE1"
-                        FILEREAD $hFile, 0, $strtask2
-                ENDWHILE
-                FILECLOSE $hFile
+        ENDWHILE
+        FILECLOSE $hFile
 
 ENDDFS
 
@@ -212,27 +212,27 @@ DFS omniOff
         COMMINIT $hFile, "baud=19200 parity=N data=8 stop=1"
         COMMSETTIMEOUT $hFile, -1, -1, 1000
                 
+        FILEWRITE $hFile "CONN18"
+        FILEREAD $hFile, 0, $strtask2
+        WHILE STRCMP($strtask2,"READY0A",0)
                 FILEWRITE $hFile "CONN18"
                 FILEREAD $hFile, 0, $strtask2
-                WHILE STRCMP($strtask2,"READY0A",0)
-                        FILEWRITE $hFile "CONN18"
-                        FILEREAD $hFile, 0, $strtask2
-                ENDWHILE
-                
+        ENDWHILE
+        
+        FILEWRITE $hFile "CLS3A"
+        FILEREAD $hFile, 0, $strtask2
+        WHILE STRCMP($strtask2,"ReceivedBF",0)
                 FILEWRITE $hFile "CLS3A"
                 FILEREAD $hFile, 0, $strtask2
-                WHILE STRCMP($strtask2,"ReceivedBF",0)
-                        FILEWRITE $hFile "CLS3A"
-                        FILEREAD $hFile, 0, $strtask2
-                ENDWHILE
-                
+        ENDWHILE
+        
+        FILEWRITE $hFile "DCONE1"
+        FILEREAD $hFile, 0, $strtask2
+        WHILE STRCMP($strtask2,"CLOSED42",0)
                 FILEWRITE $hFile "DCONE1"
                 FILEREAD $hFile, 0, $strtask2
-                WHILE STRCMP($strtask2,"CLOSED42",0)
-                        FILEWRITE $hFile "DCONE1"
-                        FILEREAD $hFile, 0, $strtask2
-                ENDWHILE
-                FILECLOSE $hFile
+        ENDWHILE
+        FILECLOSE $hFile
         
 ENDDFS
 
@@ -243,29 +243,29 @@ DFS omniSetInt
         $hFile = FILEOPEN $strtask1, 2
         COMMINIT $hFile, "baud=19200 parity=N data=8 stop=1"
         COMMSETTIMEOUT $hFile, -1, -1, 1000
-                
+
+        FILEWRITE $hFile "CONN18"
+        FILEREAD $hFile, 0, $strtask2
+        WHILE STRCMP($strtask2,"READY0A",0)
                 FILEWRITE $hFile "CONN18"
                 FILEREAD $hFile, 0, $strtask2
-                WHILE STRCMP($strtask2,"READY0A",0)
-                        FILEWRITE $hFile "CONN18"
-                        FILEREAD $hFile, 0, $strtask2
-                ENDWHILE
-                
-                FILEWRITE $hFile $omniIntVal
+        ENDWHILE
+
+        FILEWRITE $hFile $strtask4
+        FILEREAD $hFile, 0, $strtask2
+        WHILE STRCMP($strtask2,"ReceivedBF",0)
+                FILEWRITE $hFile $strtask4
                 FILEREAD $hFile, 0, $strtask2
-                WHILE STRCMP($strtask2,"ReceivedBF",0)
-                        FILEWRITE $hFile $omniIntVal
-                        FILEREAD $hFile, 0, $strtask2
-                ENDWHILE
-                
+        ENDWHILE
+
+        FILEWRITE $hFile "DCONE1"
+        FILEREAD $hFile, 0, $strtask2
+        WHILE STRCMP($strtask2,"CLOSED42",0)
                 FILEWRITE $hFile "DCONE1"
                 FILEREAD $hFile, 0, $strtask2
-                WHILE STRCMP($strtask2,"CLOSED42",0)
-                        FILEWRITE $hFile "DCONE1"
-                        FILEREAD $hFile, 0, $strtask2
-                ENDWHILE
-                FILECLOSE $hFile
-        
+        ENDWHILE
+        FILECLOSE $hFile
+
 ENDDFS
 
 ;##########Alicat Functions############;
@@ -277,11 +277,10 @@ DFS setAlicatPress
         COMMINIT $hFile, "baud=19200 parity=N data=8 stop=1"
         COMMSETTIMEOUT $hFile, -1, -1, 1000
                 
-        $alicatID = "A"
-        $press = $Q                           
-        $strtask2 = DBLTOSTR( $press , 0 ) 
-        $strtask3 = $alicatID + "S" + $strtask2
-
-        FILEWRITE $hFile $strtask3
+                $strtask2 = DBLTOSTR($Q,2)
+                $strtask3 = "AS" + $strtask2 + "\x0D"
+                FILEWRITENOTERM $hFile $strtask3
         FILECLOSE $hFile
+
 ENDDFS
+
