@@ -277,9 +277,9 @@ DFS setAlicatPress
         COMMINIT $hFile, "baud=19200 parity=N data=8 stop=1"
         COMMSETTIMEOUT $hFile, -1, -1, 1000
                 
-                $strtask2 = DBLTOSTR($Q,2)
-                $strtask3 = "AS" + $strtask2 + "\x0D"
-                FILEWRITENOTERM $hFile $strtask3
+        $strtask2 = DBLTOSTR($Q,2)
+        $strtask3 = "AS" + $strtask2 + "\x0D"
+        FILEWRITENOTERM $hFile $strtask3
         FILECLOSE $hFile
 
 ENDDFS
