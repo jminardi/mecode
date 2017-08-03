@@ -923,7 +923,7 @@ class G(object):
     def omni_intensity(self, com_port, value):
         command = 'SIL{}'.format(value)
         data = self.calc_CRC8(command)
-        self.write('$omniIntVal="{}"'.format(data))
+        self.write('$strtask4="{}"'.format(data))
         self.write('Call omniSetInt P{}'.format(com_port))
 
     def set_alicat_pressure(self,com_port,value):
@@ -940,7 +940,7 @@ class G(object):
                 else:
                     CRC8 >>= 1
                 letter >>= 1
-        return data +'{:02X}\r'.format(CRC8)
+        return data +'{:02X}'.format(CRC8)
 
 
     # Public Interface  #######################################################
