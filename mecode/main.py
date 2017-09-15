@@ -924,8 +924,8 @@ class G(object):
         
         """
         import numpy as np
-        start_spiral_turns = (start_diameter/2)/spacing
-        end_spiral_turns = (end_diameter/2)/spacing
+        start_spiral_turns = (start_diameter/2.0)/spacing
+        end_spiral_turns = (end_diameter/2.0)/spacing
         
         starting_position = [self._current_position['x'],self._current_position['y']]
         
@@ -937,7 +937,9 @@ class G(object):
 
         # SEE: https://www.comsol.com/blogs/how-to-build-a-parameterized-archimedean-spiral-geometry/
         b = spacing/(2*math.pi)
-        t = np.arange(start_spiral_turns*2*math.pi, end_spiral_turns*2*math.pi+step_angle, step_angle)
+        t = np.arange(start_spiral_turns*2*math.pi, end_spiral_turns*2*math.pi, step_angle)
+        #Add last final point to ensure correct outer diameter
+        t = np.append(t,end_spiral_turns*2*math.pi)
         if start == 'center':
             pass
         elif start == 'edge':
@@ -953,6 +955,7 @@ class G(object):
                 raise Exception("Must either choose 'CW' or 'CCW' for spiral direction.")
             y_move = step*b*math.sin(step)+starting_position[1]
             self.move(x_move, y_move)
+            self.write("#{}".format(2*((x_move-starting_position[0])**2+(y_move-starting_position[1])**2)**0.5))
 
         if was_relative:
                 self.relative()
