@@ -57,7 +57,7 @@ import math
 import os
 from collections import defaultdict
 
-from .printer import Printer
+from printer import Printer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -728,7 +728,7 @@ class G(object):
 
         Examples
         --------
-        >>> # meander through a 10x10 sqaure with a spacing of 1mm starting in
+        >>> # meander through a 10x10 square with a spacing of 1mm starting in
         >>> # the lower left.
         >>> g.meander(10, 10, 1)
 
@@ -882,6 +882,81 @@ class G(object):
         if was_absolute:
             self.absolute()
 
+    def spiral(self, end_diameter, spacing, start='center', direction='CW', step_angle = 0.1, start_diameter = 0):
+        """ Performs an Archimedean spiral. Start by moving to the center of the spiral location
+        then use the 'start' argument to specify a starting location (either center or edge).
+
+        Parameters
+        ----------
+        end_diameter : float
+            The outer diameter of the spiral.
+        spacing : float
+            The spacing between lines of the spiral.
+        start_diameter : float
+            The inner diameter of the spiral (default: 0).
+        step_angle : float
+            Resolution of the spiral in radians, smaller is higher resolution (default: 0.1).
+        start : str (either 'center', 'edge')
+            The location to start the spiral (default: 'center').
+        direction : str (either 'CW', 'CCW')
+            Direction to print the spiral, either clockwise or counterclockwise. (default: 'CW')
+
+        Examples
+        --------
+        >>> # move to origin
+        >>> g.absolute()
+        >>> g.move(x=0, y=0)
+
+        >>> # start first spiral, outer diameter of 20, spacing of 1
+        >>> g.spiral(20,1)
+
+        >>> # move to second spiral location and do similar spiral but start at edge
+        >>> g.move(x=50,y=0)
+        >>> g.spiral(20,1,start='edge')
+
+        >>> # move to third spiral location, this time starting at edge but printing CCW
+        >>> g.move(y=50,x=50)
+        >>> g.spiral(20,1,start='edge',direction='CCW')
+        
+        >>> # move to fourth spiral location, starting at center again but printing CCW
+        >>> g.move(x=0,y=50)
+        >>> g.spiral(20,1,direction='CCW')
+        
+        """
+        import numpy as np
+        start_spiral_turns = (start_diameter/2)/spacing
+        end_spiral_turns = (end_diameter/2)/spacing
+        
+        starting_position = [self._current_position['x'],self._current_position['y']]
+        
+        was_relative = True
+        if self.is_relative:
+            self.absolute()
+        else:
+            was_relative = False
+
+        # SEE: https://www.comsol.com/blogs/how-to-build-a-parameterized-archimedean-spiral-geometry/
+        b = spacing/(2*math.pi)
+        t = np.arange(start_spiral_turns*2*math.pi, end_spiral_turns*2*math.pi+step_angle, step_angle)
+        if start == 'center':
+            pass
+        elif start == 'edge':
+            t = t[::-1]
+        else:
+            raise Exception("Must either choose 'center' or 'edge' for starting position.")
+        for step in t:
+            if (direction == 'CW' and start == 'center') or (direction == 'CCW' and start == 'edge'):
+                x_move = -step*b*math.cos(step)+starting_position[0]
+            elif (direction == 'CCW' and start == 'center') or (direction == 'CW' and start == 'edge'):
+                x_move = step*b*math.cos(step)+starting_position[0]
+            else:
+                raise Exception("Must either choose 'CW' or 'CCW' for spiral direction.")
+            y_move = step*b*math.sin(step)+starting_position[1]
+            self.move(x_move, y_move)
+
+        if was_relative:
+                self.relative()
+
     # AeroTech Specific Functions  ############################################
 
     def get_axis_pos(self, axis):
@@ -941,7 +1016,6 @@ class G(object):
                     CRC8 >>= 1
                 letter >>= 1
         return data +'{:02X}'.format(CRC8)
-
 
     # Public Interface  #######################################################
 
