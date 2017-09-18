@@ -843,7 +843,7 @@ class G(object):
                 raise Exception("Must either choose 'CW' or 'CCW' for spiral direction.")
             y_move = step*b*math.sin(step)+starting_position[1]
             self.move(x_move, y_move)
-            self.write("#{}".format(2*((x_move-starting_position[0])**2+(y_move-starting_position[1])**2)**0.5))
+            #self.write(";{}".format(2*((x_move-starting_position[0])**2+(y_move-starting_position[1])**2)**0.5))
 
         if was_relative:
                 self.relative()
