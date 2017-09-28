@@ -47,8 +47,8 @@ class TestGMatrix(TestGFixture):
         self.assert_position({'x': 0, 'y': 0, 'z': 0})        
         
     def test_multiple_matrix_operations(self):
-        # See if we can rotate our rectangel drawing by 90 degrees, but
-        # get to 90 degress by rotating twice.
+        # See if we can rotate our rectangle drawing by 90 degrees, but
+        # get to 90 degrees by rotating twice.
         self.g.push_matrix()
         self.g.rotate(math.pi/4)
         self.g.rotate(math.pi/4)
@@ -159,6 +159,40 @@ class TestGMatrix(TestGFixture):
         self.assertAlmostEqual(self.g._matrix_transform_length(2), 4.0)
         self.g.scale(.25)
         self.assertAlmostEqual(self.g._matrix_transform_length(2), 1.0)
+
+    def test_reflect(self):
+        self.g.push_matrix()
+        self.g.move(10,20)
+        self.g.reflect(0)
+        self.g.move(10,20)
+        self.g.reflect(math.pi/2)
+        self.g.move(10,20)
+        self.g.reflect(0)
+        self.g.reflect(math.pi/2)
+        self.g.move(10,20)
+        self.expect_cmd("""
+        G1 X10.000000 Y20.000000
+        G1 X10.000000 Y-20.000000
+        G1 X-10.000000 Y-20.000000
+        G1 X10.000000 Y20.000000
+        """)
+        self.g.pop_matrix()
+        self.assert_output()
+
+    def test_rotate_and_reflect(self):
+        self.g.move(10, 0)
+        self.g.push_matrix()
+        self.g.rotate(math.pi/2)
+        self.g.move(10, 0)
+        self.g.reflect(math.pi/2)
+        self.g.move(10, 0)
+        self.expect_cmd("""
+        G1 X10.000000 Y0.000000
+        G1 X0.000000 Y10.000000
+        G1 X-0.000000 Y-10.000000
+        """)
+        self.g.pop_matrix()
+        self.assert_output()
 
 if __name__ == '__main__':
     unittest.main()
