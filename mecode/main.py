@@ -848,6 +848,111 @@ class G(object):
         if was_relative:
                 self.relative()
 
+    def gradient_spiral(self, end_diameter, spacing, gradient, feedrate, flowrate, start='center', direction='CW', step_angle = 0.1, start_diameter = 0):
+        """ Identical motion to the regular spiral function, but with the control of two syringe pumps to enable control over
+            dielectric properties over the course of the spiral. Starting with simply hitting certain dielectric constants at 
+            different values along the radius of the spiral.
+
+        Parameters
+        ----------
+        end_diameter : float
+            The outer diameter of the spiral.
+        spacing : float
+            The spacing between lines of the spiral.
+        gradient : str
+            Functioning defining the ink concentration along the radius of the spiral
+        feedrate : float
+            Feedrate is the speed of the nozzle relative to the substrate
+        flowrate : float
+            Flowrate is a measure of the amount of ink dispensed per second by the syringe pump
+        start : str (either 'center', 'edge')
+            The location to start the spiral (default: 'center').
+        direction : str (either 'CW', 'CCW')
+            Direction to print the spiral, either clockwise or counterclockwise. (default: 'CW')
+        step_angle : float
+            Resolution of the spiral in radians, smaller is higher resolution (default: 0.1).
+        start_diameter : float
+            The inner diameter of the spiral (default: 0).
+
+        Examples
+        --------
+        >>> g.gradient_spiral(start_diameter=7.62, #mm
+        ...     end_diameter=30.48, #mm
+        ...     spacing=1, #mm
+        ...     feedrate=8, #mm/s
+        ...     flowrate=2/60.0, #rot/s
+        ...     start='edge', #'edge' or 'center'
+        ...     direction='CW', #'CW' or 'CCW'
+        ...     gradient="-0.322*r**2 - 6.976*r + 131.892") #Any function
+        """
+
+        import numpy as np
+        import sympy as sy
+
+        def calculate_extrusion_values(radius, length, feed = feedrate, flow =flowrate, formula=gradient):
+            expr = sy.sympify(formula)
+            r = sy.symbols('r')
+            minor_fraction = np.clip(float(expr.subs(r,radius)),0,100)/100
+            line_flow = length/float(feed)*flow
+            return [minor_fraction*line_flow,(1-minor_fraction)*line_flow]
+
+        start_spiral_turns = (start_diameter/2.0)/spacing
+        end_spiral_turns = (end_diameter/2.0)/spacing
+        
+        center_position = [self._current_position['x'],self._current_position['y']]
+        
+        was_relative = True
+        if self.is_relative:
+            self.absolute()
+        else:
+            was_relative = False
+
+        # SEE: https://www.comsol.com/blogs/how-to-build-a-parameterized-archimedean-spiral-geometry/
+        b = spacing/(2*math.pi)
+        t = np.arange(start_spiral_turns*2*math.pi, end_spiral_turns*2*math.pi, step_angle)
+        #Add last final point to ensure correct outer diameter
+        t = np.append(t,end_spiral_turns*2*math.pi)
+        if start == 'center':
+            pass
+        elif start == 'edge':
+            t = t[::-1]
+        else:
+            raise Exception("Must either choose 'center' or 'edge' for starting position.")
+        
+        #Start writing moves
+        self.feed(feedrate)
+        syringe_extrusion = np.array([0.0,0.0])
+
+        #Move to starting positon
+        if (direction == 'CW' and start == 'center') or (direction == 'CCW' and start == 'edge'):
+            x_move = -t[0]*b*math.cos(t[0])+center_position[0]
+        elif (direction == 'CCW' and start == 'center') or (direction == 'CW' and start == 'edge'):
+            x_move = t[0]*b*math.cos(t[0])+center_position[0]
+        else:
+            raise Exception("Must either choose 'CW' or 'CCW' for spiral direction.")
+        y_move = t[0]*b*math.sin(t[0])+center_position[1]
+        self.move(x_move, y_move)
+
+        #Zero a & b axis before printing, we do this so it can easily do multiple layers without quickly jumping back to 0
+        self.write('G92 a0 b0')
+
+        for step in t[1:]:
+            if (direction == 'CW' and start == 'center') or (direction == 'CCW' and start == 'edge'):
+                x_move = -step*b*math.cos(step)+center_position[0]
+            elif (direction == 'CCW' and start == 'center') or (direction == 'CW' and start == 'edge'):
+                x_move = step*b*math.cos(step)+center_position[0]
+            else:
+                raise Exception("Must either choose 'CW' or 'CCW' for spiral direction.")
+            y_move = step*b*math.sin(step)+center_position[1]
+            
+            radius_pos = np.sqrt((self._current_position['x']-center_position[0])**2 + (self._current_position['y']-center_position[1])**2)
+            line_length = np.sqrt((x_move-self._current_position['x'])**2 + (y_move-self._current_position['y'])**2)
+            syringe_extrusion += calculate_extrusion_values(radius_pos,line_length)
+            self.move(x_move, y_move, a=syringe_extrusion[0],b=syringe_extrusion[1])
+
+        if was_relative:
+                self.relative()
+
     # AeroTech Specific Functions  ############################################
 
     def get_axis_pos(self, axis):
