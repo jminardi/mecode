@@ -75,6 +75,40 @@ class GMatrix(G):
         scale_matrix = np.identity(2) * scale
         self.matrix_stack[-1] = scale_matrix * self.matrix_stack[-1]
 
+    def reflect(self, angle):
+        """ Reflect about the line starting from the origin at given angle
+        from the x axis.
+
+        Example
+        -------
+        >>> # reflect about the x axis, such that up is down
+        >>> g.reflect(0)
+        >>> # reflect about the y axis, such that right is left
+        >>> g.reflect(math.pi/2)
+
+        """
+
+        # The transformation matrix for a reflection about a line at angle
+        # t from the x axis is
+        #
+        #  [[cos(2t),  sin(2t)],
+        #   [sin(2t), -cos(2t)]]
+        #
+        # In our case, t is the given angle plus the current angle between vector [1,0]
+        # and the absolute x axis, i.e. the angle of the current coordinate system.
+
+        # So first, we get that angle
+        x_axis = self.matrix_stack[-1] * np.matrix([1, 0]).T
+        x_angle = math.atan2(x_axis.item(1), x_axis.item(0))
+
+        # Now we can set 2t in our adjusted coordinate system
+        tt = 2 * (x_angle + angle)
+
+        reflection_matrix = np.matrix([[math.cos(tt), math.sin(tt)],
+                                       [math.sin(tt), -1 * math.cos(tt)]])
+
+        self.matrix_stack[-1] = reflection_matrix * self.matrix_stack[-1]
+
     def _matrix_transform(self, x, y, z):
         "Transform an x,y,z coordinate by our transformation matrix."
         matrix = self.matrix_stack[-1]
