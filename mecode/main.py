@@ -235,7 +235,8 @@ class G(object):
 
         """
         args = self._format_args(x, y, z, **kwargs)
-        self.write('G92 ' + args)
+        space = ' ' if len(args) > 0 else ''
+        self.write('G92' + space + args + ' ;set home');
 
         self._update_current_position(mode='absolute', x=x, y=y, z=z, **kwargs)
 
@@ -245,7 +246,7 @@ class G(object):
         # FIXME This does not work with internal current_position
         # FIXME You must call an abs_move after this to re-sync
         # current_position
-        self.write('G92.1')
+        self.write('G92.1 ;reset position to machine coordinates without moving')
 
     def relative(self):
         """ Enter relative movement mode, in general this method should not be
@@ -253,7 +254,7 @@ class G(object):
 
         """
         if not self.is_relative:
-            self.write('G91')
+            self.write('G91 ;relative')
             self.is_relative = True
 
     def absolute(self):
@@ -262,16 +263,16 @@ class G(object):
 
         """
         if self.is_relative:
-            self.write('G90')
+            self.write('G90 ;absolute')
             self.is_relative = False
 
     def feed(self, rate):
-        """ Set the feed rate (tool head speed) in mm/s
+        """ Set the feed rate (tool head speed) in (typically) mm/minute
 
         Parameters
         ----------
         rate : float
-            The speed to move the tool head in mm/s.
+            The speed to move the tool head in (typically) mm/minute.
 
         """
         self.write('G1 F{}'.format(rate))
@@ -297,9 +298,9 @@ class G(object):
         """
         self._write_header()
         if self.is_relative:
-            self.write('G91')
+            self.write('G91 ;relative')
         else:
-            self.write('G90')
+            self.write('G90 ;absolute')
 
     def teardown(self, wait=True):
         """ Close the outfile file after writing the footer if opened. This
@@ -444,14 +445,14 @@ class G(object):
             raise RuntimeError(msg)
         dimensions = [k.lower() for k in dims.keys()]
         if 'x' in dimensions and 'y' in dimensions:
-            plane_selector = 'G17'  # XY plane
+            plane_selector = 'G17 ;XY plane'  # XY plane
             axis = helix_dim
         elif 'x' in dimensions:
-            plane_selector = 'G18'  # XZ plane
+            plane_selector = 'G18 ;XZ plane'  # XZ plane
             dimensions.remove('x')
             axis = dimensions[0].upper()
         elif 'y' in dimensions:
-            plane_selector = 'G19'  # YZ plane
+            plane_selector = 'G19 ;YZ plane'  # YZ plane
             dimensions.remove('y')
             axis = dimensions[0].upper()
         else:
@@ -501,7 +502,7 @@ class G(object):
             dims['E'] = filament_length + current_extruder_position
 
         if axis is not None:
-            self.write('G16 X Y {}'.format(axis))  # coordinate axis assignment
+            self.write('G16 X Y {} ;coordinate axis assignment'.format(axis))  # coordinate axis assignment
         self.write(plane_selector)
         args = self._format_args(**dims)
         if helix_dim is None:
