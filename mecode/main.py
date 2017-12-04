@@ -1316,7 +1316,7 @@ class G(object):
 
             for index in [x+3 for x in range(len(history[1:-1])-3)]:
                 X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]                
-                ax.plot(X, Y, Z,color = cm.inferno(color[index])[:-1])
+                ax.plot(X, Y, Z,color = cm.gray(color[index])[:-1],linewidth=1.5)
 
             X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
 
@@ -1333,10 +1333,10 @@ class G(object):
             ax.set_ylim(mean_y - max_range, mean_y + max_range)
             ax.set_zlim(mean_z - max_range, mean_z + max_range)
 
-            if outfile = None:
+            if outfile == None:
                 plt.show()
             else:
-                plt.savefig(outfile,dpi=200)
+                plt.savefig(outfile,dpi=300)
 
         elif backend == 'matplotlib2d':
             from mpl_toolkits.mplot3d import Axes3D
@@ -1364,7 +1364,7 @@ class G(object):
             ax.set_xlim(mean_x - max_range, mean_x + max_range)
             ax.set_ylim(mean_y - max_range, mean_y + max_range)
 
-            if outfile = None:
+            if outfile == None:
                 plt.show()
             else:
                 plt.savefig(outfile,dpi=200)
