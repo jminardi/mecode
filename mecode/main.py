@@ -1291,6 +1291,12 @@ class G(object):
                 letter >>= 1
         return data +'{:02X}'.format(CRC8)
 
+    # Shapie Specific Functions  ##############################################
+
+    def read_laser(self):
+        val = self.write('M54')
+        return val
+
     # Public Interface  #######################################################
 
     def view(self, backend='matplotlib',outfile=None):
