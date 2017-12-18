@@ -136,6 +136,13 @@ class GMatrix(G):
         (x,y,z) = self._matrix_transform(x,y,z)
         super(GMatrix, self).move(x,y,z, **kwargs)
 
+    def _arc_direction_transform(self, direction):
+        if np.linalg.det(self.matrix_stack[-1]) < 0:
+            direction_reverse = { 'CW' : 'CCW',
+                                  'CCW' : 'CW' }
+            return direction_reverse[direction]
+        return direction
+
     def arc(self, x=None, y=None, z=None, direction='CW', radius='auto',
             helix_dim=None, helix_len=0, **kwargs):
         (x_prime,y_prime,z_prime) = self._matrix_transform(x,y,z)
@@ -143,6 +150,7 @@ class GMatrix(G):
         if y is None: y_prime = None
         if z is None: z_prime = None
         if helix_len: helix_len = self._matrix_transform_length(helix_len)
+        direction = self._arc_direction_transform(direction)
         super(GMatrix, self).arc(x=x_prime,y=y_prime,z=z_prime,direction=direction,radius=radius,
                                  helix_dim=helix_dim, helix_len=helix_len,
                                  **kwargs)

@@ -134,6 +134,17 @@ class TestGMatrix(TestGFixture):
         self.assert_output()        
         self.assert_almost_position({'x': 10, 'y': 0, 'z': 0})
 
+    def test_arc_reflect(self):
+        self.g.reflect(0.0)
+        self.g.arc(x=10,y=0)
+        # Without the reflect this would be a G2.
+        self.expect_cmd("""
+        G17 ;XY plane
+        G3 X10.000000 Y0.000000 R5.000000
+        """)
+        self.assert_output()
+        self.assert_almost_position({'x': 10, 'y': 0, 'z': 0})
+
     def test_current_position(self):
         self.g.push_matrix()
         self.g.move(5, 0)
