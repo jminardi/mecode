@@ -1182,7 +1182,12 @@ class G(object):
     # Shapie Specific Functions  ##############################################
 
     def read_laser(self):
-        val = self.write('M54')
+        self.write('G4 P1')
+        try:
+            val = float(self.write('M54',resp_needed=True).split('ok')[0])
+            return val
+        except:
+            raise ValueError("Failed to receive data from laser.")
         return val
 
     # Public Interface  #######################################################
