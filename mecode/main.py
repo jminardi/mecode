@@ -883,8 +883,8 @@ class G(object):
         if was_absolute:
             self.absolute()
 
-    def spiral(self, end_diameter, spacing, start='center', direction='CW', 
-                step_angle = 0.1, start_diameter = 0):
+    def spiral(self, end_diameter, spacing, feedrate, start='center', direction='CW', 
+                step_angle = 0.1, start_diameter = 0, center_position=None):
         """ Performs an Archimedean spiral. Start by moving to the center of the spiral location
         then use the 'start' argument to specify a starting location (either center or edge).
 
@@ -894,43 +894,43 @@ class G(object):
             The outer diameter of the spiral.
         spacing : float
             The spacing between lines of the spiral.
-        start_diameter : float
-            The inner diameter of the spiral (default: 0).
-        step_angle : float
-            Resolution of the spiral in radians, smaller is higher resolution (default: 0.1).
+        feedrate : float
+            Feedrate is the speed of the nozzle relative to the substrate
         start : str (either 'center', 'edge')
             The location to start the spiral (default: 'center').
         direction : str (either 'CW', 'CCW')
             Direction to print the spiral, either clockwise or counterclockwise. (default: 'CW')
+        step_angle : float
+            Resolution of the spiral in radians, smaller is higher resolution (default: 0.1).
+        start_diameter : float
+            The inner diameter of the spiral (default: 0).
+        center_position : list
+            Position of the absolute center of the spiral, useful when starting a spiral at the edge of a completed spiral
 
         Examples
-        --------
-        >>> # move to origin
-        >>> g.absolute()
-        >>> g.move(x=0, y=0)
 
-        >>> # start first spiral, outer diameter of 20, spacing of 1
-        >>> g.spiral(20,1)
+        >>> # start first spiral, outer diameter of 20, spacing of 1, feedrate of 8
+        >>> g.spiral(20,1,8)
 
         >>> # move to second spiral location and do similar spiral but start at edge
-        >>> g.move(x=50,y=0)
-        >>> g.spiral(20,1,start='edge')
+        >>> g.spiral(20,1,8,start='edge',center_position=[50,0])
 
         >>> # move to third spiral location, this time starting at edge but printing CCW
-        >>> g.move(y=50,x=50)
-        >>> g.spiral(20,1,start='edge',direction='CCW')
+        >>> g.spiral(20,1,8,start='edge',direction='CCW',center_position=[50,50])
         
         >>> # move to fourth spiral location, starting at center again but printing CCW
-        >>> g.move(x=0,y=50)
-        >>> g.spiral(20,1,direction='CCW')
+        >>> g.spiral(20,1,8,direction='CCW',center_position=[0,50])
         
         """
         import numpy as np
         start_spiral_turns = (start_diameter/2.0)/spacing
         end_spiral_turns = (end_diameter/2.0)/spacing
         
-        starting_position = [self._current_position['x'],self._current_position['y']]
+        #Use current position as center position if none is specified
+        if center_position is None:
+            center_position = [self._current_position['x'],self._current_position['y']]
         
+        #Keep track of whether currently in relative or absolute mode
         was_relative = True
         if self.is_relative:
             self.absolute()
@@ -940,6 +940,7 @@ class G(object):
         # SEE: https://www.comsol.com/blogs/how-to-build-a-parameterized-archimedean-spiral-geometry/
         b = spacing/(2*math.pi)
         t = np.arange(start_spiral_turns*2*math.pi, end_spiral_turns*2*math.pi, step_angle)
+        
         #Add last final point to ensure correct outer diameter
         t = np.append(t,end_spiral_turns*2*math.pi)
         if start == 'center':
@@ -948,17 +949,31 @@ class G(object):
             t = t[::-1]
         else:
             raise Exception("Must either choose 'center' or 'edge' for starting position.")
-        for step in t:
+        
+        #Move to starting positon
+        if (direction == 'CW' and start == 'center') or (direction == 'CCW' and start == 'edge'):
+            x_move = -t[0]*b*math.cos(t[0])+center_position[0]
+        elif (direction == 'CCW' and start == 'center') or (direction == 'CW' and start == 'edge'):
+            x_move = t[0]*b*math.cos(t[0])+center_position[0]
+        else:
+            raise Exception("Must either choose 'CW' or 'CCW' for spiral direction.")
+        y_move = t[0]*b*math.sin(t[0])+center_position[1]
+        self.move(x_move, y_move)
+
+        #Start writing moves
+        self.feed(feedrate)
+
+        for step in t[1:]:
             if (direction == 'CW' and start == 'center') or (direction == 'CCW' and start == 'edge'):
-                x_move = -step*b*math.cos(step)+starting_position[0]
+                x_move = -step*b*math.cos(step)+center_position[0]
             elif (direction == 'CCW' and start == 'center') or (direction == 'CW' and start == 'edge'):
-                x_move = step*b*math.cos(step)+starting_position[0]
+                x_move = step*b*math.cos(step)+center_position[0]
             else:
                 raise Exception("Must either choose 'CW' or 'CCW' for spiral direction.")
-            y_move = step*b*math.sin(step)+starting_position[1]
+            y_move = step*b*math.sin(step)+center_position[1]
             self.move(x_move, y_move)
-            #self.write(";{}".format(2*((x_move-starting_position[0])**2+(y_move-starting_position[1])**2)**0.5))
 
+        #Set back to relative mode if it was previsously before command was called
         if was_relative:
                 self.relative()
 
@@ -1327,7 +1342,8 @@ class G(object):
 
             for index in [x+3 for x in range(len(history[1:-1])-3)]:
                 X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]                
-                ax.plot(X, Y, Z,color = cm.gray(color[index])[:-1],linewidth=1.5)
+                #ax.plot(X, Y, Z,color = cm.gray(color[index])[:-1],linewidth=4.5)
+                ax.plot(X, Y, Z,color = 'b',linewidth=4.5)
 
             X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
 
