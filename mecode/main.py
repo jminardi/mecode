@@ -1319,7 +1319,7 @@ class G(object):
 
     # Public Interface  #######################################################
 
-    def view(self, backend='matplotlib',outfile=None):
+    def view(self, backend='matplotlib',outfile=None, color=False):
         """ View the generated Gcode.
 
         Parameters
@@ -1332,7 +1332,6 @@ class G(object):
         import numpy as np
         import matplotlib.cm as cm
         history = np.array(self.position_history)
-        color = self.color_history
 
         if backend == 'matplotlib':
             from mpl_toolkits.mplot3d import Axes3D
@@ -1340,10 +1339,13 @@ class G(object):
             fig = plt.figure()
             ax = fig.gca(projection='3d')
 
-            for index in [x+3 for x in range(len(history[1:-1])-3)]:
-                X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]                
-                #ax.plot(X, Y, Z,color = cm.gray(color[index])[:-1],linewidth=4.5)
-                ax.plot(X, Y, Z,color = 'b',linewidth=4.5)
+            if color:
+                for index in [x+3 for x in range(len(history[1:-1])-3)]:
+                    X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]                
+                    ax.plot(X, Y, Z,color = cm.gray(self.color_history[index])[:-1],linewidth=4.5)
+            else:
+                X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
+                ax.plot(X, Y, Z)
 
             X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
 
@@ -1365,7 +1367,7 @@ class G(object):
             else:
                 plt.savefig(outfile,dpi=300)
 
-        elif backend == 'matplotlib2d':
+        elif backend == 'matplotlib2d': #Primarily for debugging mixing nozzle spirals
             from mpl_toolkits.mplot3d import Axes3D
             import matplotlib.pyplot as plt
             fig = plt.figure()
@@ -1375,7 +1377,7 @@ class G(object):
             
             for index in [x+3 for x in range(len(history[1:-1])-3)]:
                 X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]
-                ax.plot(X, Y, color = cm.hot(color[1:-1][index])[:-1])
+                ax.plot(X, Y, color = cm.hot(self.color_history[index])[:-1],linewidth=4.5)
 
             X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
 
