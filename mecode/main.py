@@ -49,7 +49,7 @@ import math
 import os
 from collections import defaultdict
 
-from .printer import Printer
+from printer import Printer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -175,6 +175,7 @@ class G(object):
         self.extrusion_multiplier = extrusion_multiplier
 
         self.position_history = [(0, 0, 0)]
+        self.color_history = [(0, 0, 0)]
         self.speed = 0
         self.speed_history = []
 
@@ -331,7 +332,7 @@ class G(object):
         """
         self.abs_move(x=0, y=0)
 
-    def move(self, x=None, y=None, z=None, rapid=False, **kwargs):
+    def move(self, x=None, y=None, z=None, rapid=False, color=0, **kwargs):
         """ Move the tool head to the given position. This method operates in
         relative mode unless a manual call to `absolute` was given previously.
         If an absolute movement is desired, the `abs_move` method is
@@ -366,7 +367,7 @@ class G(object):
             filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier
             kwargs['E'] = filament_length + current_extruder_position
 
-        self._update_current_position(x=x, y=y, z=z, **kwargs)
+        self._update_current_position(x=x, y=y, z=z, color=color, **kwargs)
         args = self._format_args(x, y, z, **kwargs)
         cmd = 'G0 ' if rapid else 'G1 '
         self.write(cmd + args)
@@ -617,7 +618,7 @@ class G(object):
 
         Examples
         --------
-        >>> # meander through a 10x10 sqaure with a spacing of 1mm starting in
+        >>> # meander through a 10x10 square with a spacing of 1mm starting in
         >>> # the lower left.
         >>> g.meander(10, 10, 1)
 
@@ -771,6 +772,369 @@ class G(object):
         if was_absolute:
             self.absolute()
 
+    def spiral(self, end_diameter, spacing, feedrate, start='center', direction='CW', 
+                step_angle = 0.1, start_diameter = 0, center_position=None):
+        """ Performs an Archimedean spiral. Start by moving to the center of the spiral location
+        then use the 'start' argument to specify a starting location (either center or edge).
+
+        Parameters
+        ----------
+        end_diameter : float
+            The outer diameter of the spiral.
+        spacing : float
+            The spacing between lines of the spiral.
+        feedrate : float
+            Feedrate is the speed of the nozzle relative to the substrate
+        start : str (either 'center', 'edge')
+            The location to start the spiral (default: 'center').
+        direction : str (either 'CW', 'CCW')
+            Direction to print the spiral, either clockwise or counterclockwise. (default: 'CW')
+        step_angle : float
+            Resolution of the spiral in radians, smaller is higher resolution (default: 0.1).
+        start_diameter : float
+            The inner diameter of the spiral (default: 0).
+        center_position : list
+            Position of the absolute center of the spiral, useful when starting a spiral at the edge of a completed spiral
+
+        Examples
+
+        >>> # start first spiral, outer diameter of 20, spacing of 1, feedrate of 8
+        >>> g.spiral(20,1,8)
+
+        >>> # move to second spiral location and do similar spiral but start at edge
+        >>> g.spiral(20,1,8,start='edge',center_position=[50,0])
+
+        >>> # move to third spiral location, this time starting at edge but printing CCW
+        >>> g.spiral(20,1,8,start='edge',direction='CCW',center_position=[50,50])
+        
+        >>> # move to fourth spiral location, starting at center again but printing CCW
+        >>> g.spiral(20,1,8,direction='CCW',center_position=[0,50])
+        
+        """
+        import numpy as np
+        start_spiral_turns = (start_diameter/2.0)/spacing
+        end_spiral_turns = (end_diameter/2.0)/spacing
+        
+        #Use current position as center position if none is specified
+        if center_position is None:
+            center_position = [self._current_position['x'],self._current_position['y']]
+        
+        #Keep track of whether currently in relative or absolute mode
+        was_relative = True
+        if self.is_relative:
+            self.absolute()
+        else:
+            was_relative = False
+
+        # SEE: https://www.comsol.com/blogs/how-to-build-a-parameterized-archimedean-spiral-geometry/
+        b = spacing/(2*math.pi)
+        t = np.arange(start_spiral_turns*2*math.pi, end_spiral_turns*2*math.pi, step_angle)
+        
+        #Add last final point to ensure correct outer diameter
+        t = np.append(t,end_spiral_turns*2*math.pi)
+        if start == 'center':
+            pass
+        elif start == 'edge':
+            t = t[::-1]
+        else:
+            raise Exception("Must either choose 'center' or 'edge' for starting position.")
+        
+        #Move to starting positon
+        if (direction == 'CW' and start == 'center') or (direction == 'CCW' and start == 'edge'):
+            x_move = -t[0]*b*math.cos(t[0])+center_position[0]
+        elif (direction == 'CCW' and start == 'center') or (direction == 'CW' and start == 'edge'):
+            x_move = t[0]*b*math.cos(t[0])+center_position[0]
+        else:
+            raise Exception("Must either choose 'CW' or 'CCW' for spiral direction.")
+        y_move = t[0]*b*math.sin(t[0])+center_position[1]
+        self.move(x_move, y_move)
+
+        #Start writing moves
+        self.feed(feedrate)
+
+        for step in t[1:]:
+            if (direction == 'CW' and start == 'center') or (direction == 'CCW' and start == 'edge'):
+                x_move = -step*b*math.cos(step)+center_position[0]
+            elif (direction == 'CCW' and start == 'center') or (direction == 'CW' and start == 'edge'):
+                x_move = step*b*math.cos(step)+center_position[0]
+            else:
+                raise Exception("Must either choose 'CW' or 'CCW' for spiral direction.")
+            y_move = step*b*math.sin(step)+center_position[1]
+            self.move(x_move, y_move)
+
+        #Set back to relative mode if it was previsously before command was called
+        if was_relative:
+                self.relative()
+
+    def gradient_spiral(self, end_diameter, spacing, gradient, feedrate, flowrate, 
+                start='center', direction='CW', step_angle = 0.1, start_diameter = 0,
+                center_position=None, dead_delay=0):
+        """ Identical motion to the regular spiral function, but with the control of two syringe pumps to enable control over
+            dielectric properties over the course of the spiral. Starting with simply hitting certain dielectric constants at 
+            different values along the radius of the spiral.
+
+        Parameters
+        ----------
+        end_diameter : float
+            The outer diameter of the spiral.
+        spacing : float
+            The spacing between lines of the spiral.
+        gradient : str
+            Functioning defining the ink concentration along the radius of the spiral
+        feedrate : float
+            Feedrate is the speed of the nozzle relative to the substrate
+        flowrate : float
+            Flowrate is a measure of the amount of ink dispensed per second by the syringe pump
+        start : str (either 'center', 'edge')
+            The location to start the spiral (default: 'center').
+        direction : str (either 'CW', 'CCW')
+            Direction to print the spiral, either clockwise or counterclockwise. (default: 'CW')
+        step_angle : float
+            Resolution of the spiral in radians, smaller is higher resolution (default: 0.1).
+        start_diameter : float
+            The inner diameter of the spiral (default: 0).
+        center_position : list
+            Position of the absolute center of the spiral, useful when starting a spiral at the edge of a completed spiral
+        dead_delay : float
+            Printing composition offset caused by the dead volume of the nozzle which creates a delayed
+            effect between the syringe pumps and the actual composition of the ink exiting the nozzle.
+
+        Examples
+        --------
+        >>> g.gradient_spiral(start_diameter=7.62, #mm
+        ...     end_diameter=30.48, #mm
+        ...     spacing=1, #mm
+        ...     feedrate=8, #mm/s
+        ...     flowrate=2/60.0, #rot/s
+        ...     start='edge', #'edge' or 'center'
+        ...     direction='CW', #'CW' or 'CCW'
+        ...     gradient="-0.322*r**2 - 6.976*r + 131.892") #Any function
+        """
+
+        import numpy as np
+        import sympy as sy
+
+        def calculate_extrusion_values(radius, length, feed = feedrate, flow = flowrate, formula = gradient, delay = dead_delay, spacing = spacing, start = start, outer_radius = end_diameter/2.0, inner_radius=start_diameter/2.0):
+            """Calculates the extrusion values for syringe pumps A & B during a move along the print path.
+            """
+
+            def exact_length(r0,r1,h):
+                """Calculates the exact length of an archimedean given the spacing, inner and outer radii.
+                SEE: http://www.giangrandi.ch/soft/spiral/spiral.shtml
+
+                Parameters
+                ----------
+                r0 : float
+                    The inner diameter of the spiral.
+                r1 : float
+                    The outer diameter of the spiral.
+                h  : float
+                    The spacing of the spiral.
+                """
+                #t0 & t1 are the respective diameters in terms of radians along the spiral.
+                t0 = 2*math.pi*r0/h
+                t1 = 2*math.pi*r1/h
+                return h/(2.0*math.pi)*(t1/2.0*math.sqrt(t1**2+1)+1/2.0*math.log(t1+math.sqrt(t1**2+1))-t0/2.0*math.sqrt(t0**2+1)-1/2.0*math.log(t0+math.sqrt(t0**2+1)))
+
+
+            def exact_radius(r_0,h,L):
+                """Calculates the exact outer radius of an archimedean given the spacing, inner radius and the length.
+                SEE: http://www.giangrandi.ch/soft/spiral/spiral.shtml
+
+                Parameters
+                ----------
+                r0 : float
+                    The inner radius of the spiral.
+                h  : float
+                    The spacing of the spiral.
+                L  : float
+                    The length of the spiral.
+                """
+                d_0 = r_0*2
+                if d_0 == 0:
+                    d_0 = 1e-10
+                
+                def exact_length(d0,d1,h):
+                    """Calculates the exact length of an archimedean given the spacing, inner and outer diameters.
+                    SEE: http://www.giangrandi.ch/soft/spiral/spiral.shtml
+
+                    Parameters
+                    ----------
+                    d0 : float
+                        The inner diameter of the spiral.
+                    d1 : float
+                        The outer diameter of the spiral.
+                    h  : float
+                        The spacing of the spiral.
+                    """
+                    #t0 & t1 are the respective diameters in terms of radians along the spiral.
+                    t0 = math.pi*d0/h
+                    t1 = math.pi*d1/h
+                    return h/(2.0*math.pi)*(t1/2.0*math.sqrt(t1**2+1)+1/2.0*math.log(t1+math.sqrt(t1**2+1))-t0/2.0*math.sqrt(t0**2+1)-1/2.0*math.log(t0+math.sqrt(t0**2+1)))
+
+                def exact_length_derivative(d,h):
+                    """Calculates the derivative of the exact length of an archimedean at a given diameter and spacing.
+                    SEE: http://www.giangrandi.ch/soft/spiral/spiral.shtml
+
+                    Parameters
+                    ----------
+                    d : float
+                        The diameter point of interest in the spiral.
+                    h  : float
+                        The spacing of the spiral.
+                    """
+                    #t is diameter of interest in terms of radians along the spiral.
+                    t = math.pi*d/h
+                    dl_dt = h/(2.0*math.pi)*((2*t**2+1)/(2*math.sqrt(t**2+1))+(t+math.sqrt(t**2+1))/(2*t*math.sqrt(t**2+1)+2*t**2+2))
+                    dl_dd = h*dl_dt/math.pi
+                    return dl_dd
+
+                #Approximate radius (for first guess)
+                N = (h-d_0+math.sqrt((d_0-h)**2+4*h*L/math.pi))/(2*h)
+                D_1 = 2*N*h + d_0
+                tol = 1e-10
+
+                #Use Newton's Method to iterate until within tolerance
+                while True:
+                    f_df_dt = (exact_length(d_0,D_1,h)-L)/1000/exact_length_derivative(D_1,h)
+                    if f_df_dt < tol:
+                        break
+                    D_1 -= f_df_dt   
+                return D_1/2
+        
+            def rollover(val,limit,mode):
+                if val < limit: 
+                    if mode == 'max':
+                        return val
+                    elif mode == 'min':
+                        return limit+(limit-val)
+                    else:
+                        raise ValueError("'{}' is an incorrect selection for the mode".format(mode))
+                else:
+                    if mode == 'max':
+                        return limit-(val-limit)
+                    elif mode == 'min':
+                        return val
+                    else:
+                        raise ValueError("'{}' is an incorrect selection for the mode".format(mode))
+
+            def minor_fraction_calc(e,e_a=300,e_b=2.3,n=0.102,sr=0.6):
+                """Calculates the minor fraction (fraction of part b) required to achieve the
+                specified dielectric value
+
+                Parameters
+                ----------
+                e : float
+                    Dielectric value of interest
+                e_a  : float
+                    Dielectric value of part a
+                e_b. : float
+                    Dielectric value of part b
+                n  : float
+                    Morphology factor
+                sr : float
+                    Fraction of SrTi03 in part a
+                """
+                return 1 - ((e-e_b)*((n-1)*e_b-n*e_a))/(sr*(e_b-e_a)*(n*(e-e_b)+e_b))
+            
+            """
+            This is a key line of the extrusion values calculations.
+            It starts off by calculating the exact length along the spiral for the current 
+            radius, then adds/subtracts on the dead volume delay (in effect looking into the 
+            future path) to this length, then recalculates the appropriate radius at this new 
+            postiion. This is value is then used in the gradient function to determine the minor 
+            fraction of the mixed elements. Note that if delay is 0, then this line will have no 
+            effect. If the spiral is moving outwards it must add the dead volume delay, whereas if
+            the spiral is moving inwards, it must subtract it.
+
+            """
+            if start == 'center':
+                offset_radius = exact_radius(0,spacing,rollover(exact_length(0,radius,spacing)+delay,exact_length(0,outer_radius,spacing),'max'))
+            else:
+                offset_radius = exact_radius(0,spacing,rollover(exact_length(0,radius,spacing)-delay,exact_length(0,inner_radius,spacing),'min'))
+
+            expr = sy.sympify(formula)
+            r = sy.symbols('r')
+            minor_fraction = np.clip(minor_fraction_calc(float(expr.subs(r,offset_radius))),0,1)
+            line_flow = length/float(feed)*flow
+            return [minor_fraction*line_flow,(1-minor_fraction)*line_flow,minor_fraction]
+
+        #End of calculate_extrusion_values() function
+
+        start_spiral_turns = (start_diameter/2.0)/spacing
+        end_spiral_turns = (end_diameter/2.0)/spacing
+        
+        #Use current position as center position if none is specified
+        if center_position is None:
+            center_position = [self._current_position['x'],self._current_position['y']]
+        
+        #Keep track of whether currently in relative or absolute mode
+        was_relative = True
+        if self.is_relative:
+            self.absolute()
+        else:
+            was_relative = False
+
+        #SEE: https://www.comsol.com/blogs/how-to-build-a-parameterized-archimedean-spiral-geometry/
+        b = spacing/(2*math.pi)
+        t = np.arange(start_spiral_turns*2*math.pi, end_spiral_turns*2*math.pi, step_angle)
+        
+        #Add last final point to ensure correct outer diameter
+        t = np.append(t,end_spiral_turns*2*math.pi)
+        if start == 'center':
+            pass
+        elif start == 'edge':
+            t = t[::-1]
+        else:
+            raise Exception("Must either choose 'center' or 'edge' for starting position.")
+        
+        #Move to starting positon
+        if (direction == 'CW' and start == 'center') or (direction == 'CCW' and start == 'edge'):
+            x_move = -t[0]*b*math.cos(t[0])+center_position[0]
+        elif (direction == 'CCW' and start == 'center') or (direction == 'CW' and start == 'edge'):
+            x_move = t[0]*b*math.cos(t[0])+center_position[0]
+        else:
+            raise Exception("Must either choose 'CW' or 'CCW' for spiral direction.")
+        y_move = t[0]*b*math.sin(t[0])+center_position[1]
+        self.move(x_move, y_move)
+
+        #Start writing moves
+        self.feed(feedrate)
+        syringe_extrusion = np.array([0.0,0.0])
+
+        #Zero a & b axis before printing, we do this so it can easily do multiple layers without quickly jumping back to 0
+        #Would likely be useful to change this to relative coordinates at some point
+        self.write('G92 a0 b0')
+
+        for step in t[1:]:
+            if (direction == 'CW' and start == 'center') or (direction == 'CCW' and start == 'edge'):
+                x_move = -step*b*math.cos(step)+center_position[0]
+            elif (direction == 'CCW' and start == 'center') or (direction == 'CW' and start == 'edge'):
+                x_move = step*b*math.cos(step)+center_position[0]
+            else:
+                raise Exception("Must either choose 'CW' or 'CCW' for spiral direction.")
+            y_move = step*b*math.sin(step)+center_position[1]
+            
+            radius_pos = np.sqrt((self._current_position['x']-center_position[0])**2 + (self._current_position['y']-center_position[1])**2)
+            line_length = np.sqrt((x_move-self._current_position['x'])**2 + (y_move-self._current_position['y'])**2)
+            extrusion_values = calculate_extrusion_values(radius_pos,line_length)
+            syringe_extrusion += extrusion_values[:2]
+            self.move(x_move, y_move, a=syringe_extrusion[0],b=syringe_extrusion[1],color=extrusion_values[2])
+
+        #Set back to relative mode if it was previsously before command was called
+        if was_relative:
+                self.relative()
+
+    def purge_meander(self, x, y, spacing, volume_fraction, start='LL', orientation='x',
+            tail=False, minor_feed=None):
+        flowrate = 0.033333
+        self.write('FREERUN a {}'.format(flowrate*volume_fraction))
+        self.write('FREERUN b {}'.format(flowrate*(1-volume_fraction)))
+        self.meander(x, y, spacing, start=start, orientation=orientation,
+            tail=tail, minor_feed=minor_feed)
+        self.write('FREERUN a 0')
+        self.write('FREERUN b 0')
+
     # AeroTech Specific Functions  ############################################
 
     def get_axis_pos(self, axis):
@@ -803,19 +1167,61 @@ class G(object):
     def set_valve(self, num, value):
         self.write('$DO{}.0={}'.format(num, value))
 
+    def omni_on(self, com_port):
+        self.write('Call omniOn P{}'.format(com_port))
+
+    def omni_off(self, com_port):
+        self.write('Call omniOff P{}'.format(com_port))
+
+    def omni_intensity(self, com_port, value):
+        command = 'SIL{}'.format(value)
+        data = self.calc_CRC8(command)
+        self.write('$strtask4="{}"'.format(data))
+        self.write('Call omniSetInt P{}'.format(com_port))
+
+    def set_alicat_pressure(self,com_port,value):
+        self.write('Call setAlicatPress P{} Q{}'.format(com_port, value))
+
+    def calc_CRC8(self,data):
+        CRC8 = 0
+        for letter in list(bytearray(data)):
+            for i in range(8):
+                if (letter^CRC8)&0x01:
+                    CRC8 ^= 0x18
+                    CRC8 >>= 1
+                    CRC8 |= 0x80
+                else:
+                    CRC8 >>= 1
+                letter >>= 1
+        return data +'{:02X}'.format(CRC8)
+
+    # Shapie Specific Functions  ##############################################
+
+    def read_laser(self):
+        self.write('G4 P1')
+        try:
+            val = float(self.write('M54',resp_needed=True).split('ok')[0])
+            return val
+        except:
+            raise ValueError("Failed to receive data from laser.")
+        return val
+
     # Public Interface  #######################################################
 
-    def view(self, backend='mayavi'):
+    def view(self, backend='mayavi',outfile=None):
         """ View the generated Gcode.
 
         Parameters
         ----------
         backend : str (default: 'matplotlib')
             The plotting backend to use, one of 'matplotlib' or 'mayavi'.
+            'matplotlib2d' has been addded to better visualize mixing.
 
         """
         import numpy as np
+        import matplotlib.cm as cm
         history = np.array(self.position_history)
+        color = self.color_history
 
         if backend == 'matplotlib':
             from mpl_toolkits.mplot3d import Axes3D
@@ -823,8 +1229,13 @@ class G(object):
             fig = plt.figure()
             ax = fig.gca(projection='3d')
             ax.set_aspect('equal')
+
+            for index in [x+3 for x in range(len(history[1:-1])-3)]:
+                X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]                
+                #ax.plot(X, Y, Z,color = cm.gray(color[index])[:-1],linewidth=4.5)
+                ax.plot(X, Y, Z,color = 'b',linewidth=4.5)
+
             X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
-            ax.plot(X, Y, Z)
 
             # Hack to keep 3D plot's aspect ratio square. See SO answer:
             # http://stackoverflow.com/questions/13685386
@@ -839,12 +1250,47 @@ class G(object):
             ax.set_ylim(mean_y - max_range, mean_y + max_range)
             ax.set_zlim(mean_z - max_range, mean_z + max_range)
 
-            plt.show()
+            if outfile == None:
+                plt.show()
+            else:
+                plt.savefig(outfile,dpi=300)
+
+        elif backend == 'matplotlib2d':
+            from mpl_toolkits.mplot3d import Axes3D
+            import matplotlib.pyplot as plt
+            fig = plt.figure()
+            #ax = fig.gca(projection='3d')
+            ax = fig.gca()
+            ax.set_aspect('equal')
+            
+            for index in [x+3 for x in range(len(history[1:-1])-3)]:
+                X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]
+                ax.plot(X, Y, color = cm.hot(color[1:-1][index])[:-1])
+
+            X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
+
+            # Hack to keep 3D plot's aspect ratio square. See SO answer:
+            # http://stackoverflow.com/questions/13685386
+            max_range = np.array([X.max()-X.min(),
+                                  Y.max()-Y.min(),
+                                  Z.max()-Z.min()]).max() / 2.0
+
+            mean_x = X.mean()
+            mean_y = Y.mean()
+            mean_z = Z.mean()
+            ax.set_xlim(mean_x - max_range, mean_x + max_range)
+            ax.set_ylim(mean_y - max_range, mean_y + max_range)
+
+            if outfile == None:
+                plt.show()
+            else:
+                plt.savefig(outfile,dpi=200)
+
         elif backend == 'mayavi':
             from mayavi import mlab
             mlab.plot3d(history[:, 0], history[:, 1], history[:, 2])
         else:
-            raise Exception("Invalid plotting backend! Choose one of mayavi or matplotlib.")
+            raise Exception("Invalid plotting backend! Choose one of mayavi or matplotlib or matplotlib2d.")
 
     def write(self, statement_in, resp_needed=False):
         if self.print_lines:
@@ -943,7 +1389,7 @@ class G(object):
         args = ' '.join(args)
         return args
 
-    def _update_current_position(self, mode='auto', x=None, y=None, z=None,
+    def _update_current_position(self, mode='auto', x=None, y=None, z=None, color = None,
                                  **kwargs):
         if mode == 'auto':
             mode = 'relative' if self.is_relative else 'absolute'
@@ -979,9 +1425,9 @@ class G(object):
         z = self._current_position['z']
 
         self.position_history.append((x, y, z))
+        self.color_history.append(color)
 
         len_history = len(self.position_history)
         if (len(self.speed_history) == 0
             or self.speed_history[-1][1] != self.speed):
             self.speed_history.append((len_history - 1, self.speed))
-

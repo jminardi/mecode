@@ -15,10 +15,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-#logger.addHandler(logging.StreamHandler())
-#fh = logging.FileHandler(os.path.join(HERE, 'voxelface.log'))
-#fh.setFormatter(logging.Formatter('%(asctime)s - %(threadName)s - %(levelname)s - %(message)s'))
-#logger.addHandler(fh)
+logger.addHandler(logging.StreamHandler())
+fh = logging.FileHandler(os.path.join(HERE, 'voxelface.log'))
+fh.setFormatter(logging.Formatter('%(asctime)s - %(threadName)s - %(levelname)s - %(message)s'))
+logger.addHandler(fh)
 
 
 class Printer(object):
@@ -27,7 +27,7 @@ class Printer(object):
 
     """
 
-    def __init__(self, port='/dev/tty.usbmodem1421', baudrate=250000):
+    def __init__(self, port='/dev/tty.usbmodem1411', baudrate=250000):
 
         # USB port and baudrate for communication with the printer.
         self.port = port
@@ -319,7 +319,7 @@ class Printer(object):
 
     def _print_worker(self):
         """ This method is spawned in the print thread. It loops over every line
-        in the _buffer and sends it over serial to the printer.
+        in the _buffer and sends it over seriwal to the printer.
 
         """
         while not self.stop_printing:
@@ -387,6 +387,8 @@ class Printer(object):
                         self._ok_received.set()
                     self.responses.append(full_resp)
                     full_resp = ''
+                if 'start' in line:
+                    self.responses.append(line)
             else:  # if no printer is attached, wait 10ms to check again.
                 sleep(0.01)
 
