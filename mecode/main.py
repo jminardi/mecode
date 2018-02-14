@@ -1284,10 +1284,15 @@ class G(object):
     def omni_off(self, com_port):
         self.write('Call omniOff P{}'.format(com_port))
 
-    def omni_intensity(self, com_port, value):
-        command = 'SIL{}'.format(value)
-        data = self.calc_CRC8(command)
-        self.write('$strtask4="{}"'.format(data))
+    def omni_intensity(self, com_port, value, cal=False):
+        if cal:
+            command = 'SIR{:.2f}'.format(value)
+            data = self.calc_CRC8(command)
+            self.write('$strtask4="{}"'.format(data))
+        else:
+            command = 'SIL{:.0f}'.format(value)
+            data = self.calc_CRC8(command)
+            self.write('$strtask4="{}"'.format(data))
         self.write('Call omniSetInt P{}'.format(com_port))
 
     def set_alicat_pressure(self,com_port,value):
