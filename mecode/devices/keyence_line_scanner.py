@@ -3,6 +3,13 @@ import numpy as np
 from scipy.signal import medfilt
 
 class KeyenceLineScanner(BaseSerialDevice):
+    """ Code for interacting with LJ7080 Keyence Line Scanner.
+
+    Spacing between sample points: 50um
+    Number of samples: 800
+    Total measured length = 0.05 * 800 = 40mm
+
+    """
 
     def trigger(self):
         return self.send('TG')
@@ -15,11 +22,24 @@ class KeyenceLineScanner(BaseSerialDevice):
     		ary = ary[::-1]
     	return ary
 
-    def read_filtered_line(self, kernel_size=59):
+    def read_filtered_line(self, medfilt_kernel_size=0, sg_window_size=0):
+        """ Read a line and fill in the gaps. Optionally filter the data.
+
+        Parameters
+        ----------
+        medfilt_kernel_size : int
+            median filter kernal size. Only used if > 1. (must be odd)
+        sg_window_size : int
+            savitzky golay filter window zise. Only used if > 1. (must be odd)
+
+        """
     	ary = self.read_line()
     	ary[ary <= -999.999] = np.NaN
     	ary = interpolate_gaps(ary)
-    	ary = medfilt(ary, kernel_size)
+        if medfilt_kernel_size > 1:
+            ary = medfilt(ary, medfilt_kernel_size)
+        if sg_window_size > 1:
+            ary = savitzky_golay(ary, sg_window_size, 3)
     	return ary
 
     # def batch_start(self):
