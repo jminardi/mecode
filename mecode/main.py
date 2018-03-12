@@ -1119,7 +1119,7 @@ class G(object):
             extrusion_values = calculate_extrusion_values(radius_pos,line_length)
             syringe_extrusion += extrusion_values[:2]
             self.move(x_move, y_move, a=syringe_extrusion[0],b=syringe_extrusion[1],color=extrusion_values[2])
-
+        
         #Set back to relative mode if it was previsously before command was called
         if was_relative:
                 self.relative()
@@ -1219,17 +1219,17 @@ class G(object):
         """
         import numpy as np
         import matplotlib.cm as cm
+        from mpl_toolkits.mplot3d import Axes3D
+        import matplotlib.pyplot as plt
         history = np.array(self.position_history)
 
         if backend == 'matplotlib':
-            from mpl_toolkits.mplot3d import Axes3D
-            import matplotlib.pyplot as plt
             fig = plt.figure()
             ax = fig.gca(projection='3d')
             ax.set_aspect('equal')
 
             if color:
-                for index in [x+3 for x in range(len(history[1:-1])-3)]:
+                for index in [x+2 for x in range(len(history[1:-1])-3)]:
                     X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]                
                     ax.plot(X, Y, Z,color = cm.gray(self.color_history[index])[:-1],linewidth=4.5)
             else:
@@ -1254,38 +1254,26 @@ class G(object):
             if outfile == None:
                 plt.show()
             else:
-                plt.savefig(outfile,dpi=300)
+                plt.savefig(outfile,dpi=500)
 
         elif backend == 'matplotlib2d': #Primarily for debugging mixing nozzle spirals
-            from mpl_toolkits.mplot3d import Axes3D
-            import matplotlib.pyplot as plt
             fig = plt.figure()
-            #ax = fig.gca(projection='3d')
+            plt.margins(0.1)
             ax = fig.gca()
             ax.set_aspect('equal')
             
-            for index in [x+3 for x in range(len(history[1:-1])-3)]:
-                X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]
-                ax.plot(X, Y, color = cm.hot(self.color_history[index])[:-1],linewidth=4.5)
-
-            X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
-
-            # Hack to keep 3D plot's aspect ratio square. See SO answer:
-            # http://stackoverflow.com/questions/13685386
-            max_range = np.array([X.max()-X.min(),
-                                  Y.max()-Y.min(),
-                                  Z.max()-Z.min()]).max() / 2.0
-
-            mean_x = X.mean()
-            mean_y = Y.mean()
-            mean_z = Z.mean()
-            ax.set_xlim(mean_x - max_range, mean_x + max_range)
-            ax.set_ylim(mean_y - max_range, mean_y + max_range)
+            if color:
+                for index in [x+2 for x in range(len(history[1:-1])-3)]:
+                    X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]
+                    ax.plot(X, Y, color = cm.hot(self.color_history[index])[:-1],linewidth=1.0)
+            else:
+                X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
+                ax.plot(X, Y,linewidth=0.5)
 
             if outfile == None:
                 plt.show()
             else:
-                plt.savefig(outfile,dpi=200)
+                plt.savefig(outfile,dpi=500)
 
         elif backend == 'mayavi':
             from mayavi import mlab
