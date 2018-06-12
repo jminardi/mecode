@@ -907,7 +907,7 @@ class G(object):
                 self._write_out(line)
 
         line = line.rstrip() + self.lineend  # add lineend character
-        if 'b' in self.out_fd.mode:  # encode the string to binary if needed
+        if hasattr(self.out_fd, 'mode') and 'b' in self.out_fd.mode:  # encode the string to binary if needed
             line = encode2To3(line)
         self.out_fd.write(line)
 
