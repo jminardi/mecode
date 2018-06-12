@@ -81,7 +81,7 @@ except NameError:
 class G(object):
 
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
-                 aerotech_include=True, output_digits=6, direct_write=False,
+                 aerotech_include=False, output_digits=6, direct_write=False,
                  direct_write_mode='socket', printer_host='localhost',
                  printer_port=8000, baudrate=250000, two_way_comm=True,
                  x_axis='X', y_axis='Y', z_axis='Z', extrude=False,
