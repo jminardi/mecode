@@ -1030,7 +1030,6 @@ class G(object):
 
     def _format_args(self, x=None, y=None, z=None, i=None, j=None, k=None, **kwargs):
         d = self.output_digits
-        print((x, y, z, i, j, k, d))
         args = []
         if x is not None:
             args.append('{0}{1:.{digits}f}'.format(self.x_axis, x, digits=d))
