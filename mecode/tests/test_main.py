@@ -116,7 +116,7 @@ class TestG(TestGFixture):
     def test_setup(self):
         self.outfile.close()
         self.outfile = TemporaryFile()
-        self.g = G(outfile=self.outfile, print_lines=False)
+        self.g = G(outfile=self.outfile, print_lines=False, aerotech_include=True)
         self.expected = ""
         with open(os.path.join(HERE, '../header.txt')) as f:
             lines = f.read()
@@ -652,7 +652,7 @@ class TestG(TestGFixture):
         self.expect_cmd("""
         G90 ;absolute
         G16 X Y B ;coordinate axis assignment
-        G18 ;XZ plane 
+        G18 ;XZ plane
         G2 X0.000000 B0.000000 R28.284271
         G91 ;relative
         """)
@@ -747,8 +747,7 @@ class TestG(TestGFixture):
 
     def test_open_in_binary(self):
         outfile = TemporaryFile('wb+')
-        g = self.getGClass()(outfile=outfile, print_lines=False,
-                   aerotech_include=False)
+        g = self.getGClass()(outfile=outfile, print_lines=False)
         g.move(10,10)
         outfile.seek(0)
         lines = outfile.readlines()

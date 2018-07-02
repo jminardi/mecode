@@ -81,12 +81,26 @@ except NameError:
 class G(object):
 
     def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
-                 aerotech_include=True, output_digits=6, direct_write=False,
-                 direct_write_mode='socket', printer_host='localhost',
-                 printer_port=8000, baudrate=250000, two_way_comm=True,
-                 x_axis='X', y_axis='Y', z_axis='Z', extrude=False,
-                 filament_diameter=1.75, layer_height=0.19,
-                 extrusion_width=0.35, extrusion_multiplier=1, setup=True,
+                 aerotech_include=True,
+                 output_digits=6,
+                 direct_write=False,
+                 direct_write_mode='socket',
+                 printer_host='localhost',
+                 printer_port=8000,
+                 baudrate=250000,
+                 two_way_comm=True,
+                 x_axis='X',
+                 y_axis='Y',
+                 z_axis='Z',
+                 i_axis='I',
+                 j_axis='J',
+                 k_axis='K',
+                 extrude=False,
+                 filament_diameter=1.75,
+                 layer_height=0.19,
+                 extrusion_width=0.35,
+                 extrusion_multiplier=1,
+                 setup=True,
                  lineend='os'):
         """
         Parameters
@@ -128,6 +142,12 @@ class G(object):
             The name of the z axis (used in the exported gcode)
         z_axis : str (default 'Z')
             The name of the z axis (used in the exported gcode)
+        i_axis : str (default 'I')
+            The name of the i axis (used in the exported gcode)
+        j_axis : str (default 'J')
+            The name of the j axis (used in the exported gcode)
+        k_axis : str (default 'K')
+            The name of the k axis (used in the exported gcode)
         extrude : True or False (default: False)
             If True, a flow calculation will be done in the move command. The
             neccesary length of filament to be pushed through on a move command
@@ -164,6 +184,9 @@ class G(object):
         self.x_axis = x_axis
         self.y_axis = y_axis
         self.z_axis = z_axis
+        self.i_axis = i_axis
+        self.j_axis = j_axis
+        self.k_axis = k_axis
 
         self._current_position = defaultdict(float)
         self.is_relative = True
@@ -320,7 +343,8 @@ class G(object):
             if self.footer is not None:
                 with open(self.footer) as fd:
                     self._write_out(lines=fd.readlines())
-            self.out_fd.close()
+            if self.outfile is None:
+                self.out_fd.close()
         if self._socket is not None:
             self._socket.close()
         if self._p is not None:
@@ -512,6 +536,80 @@ class G(object):
             self.write('{0} {1} R{2:.{digits}f} G1 {3}{4}'.format(
                 command, args, radius, helix_dim.upper(), helix_len, digits=self.output_digits))
             dims[helix_dim] = helix_len
+
+        self._update_current_position(**dims)
+
+
+    def arc_ijk(self, target, center, plane, direction='CW', helix_len=None):
+        """ Arc to the given point with the given radius and in the given
+        direction. If helix_dim and helix_len are specified then the tool head
+        will also perform a linear movement along the axis orthogonal to the
+        arc plane while completing the arc.
+
+        Parameters
+        ----------
+        plane : str ('xy', 'yz', 'xz')
+            Plane in which the arc is drawn
+        target : 2-tuple of coordinates
+            the end point of the arc, on the relevant plane
+        center : 2-tuple of coordinates
+            the distance to the center point of the arc from the
+            starting position, on the relevant plane
+        direction : str (either 'CW' or 'CCW') (default: 'CW')
+            The direction to execute the arc in.
+        helix_len : float
+            The distance to move along the axis orthogonal to the arc plane
+            during the arc.
+
+        """
+
+        if len(target) != 2:
+            raise RuntimeError("'target' must be a 2-tuple of numbers (passed %s)" % target)
+        if len(center) != 2:
+            raise RuntimeError("'center' must be a 2-tuple of numbers (passed %s)" % center)
+
+        if plane == 'xy':
+            self.write('G17 ;XY plane')  # XY plane
+            dims = {
+                'x' : target[0],
+                'y' : target[1],
+                'i' : center[0],
+                'j' : center[1],
+            }
+            if helix_len:
+                dims['z'] = helix_len
+        elif plane == 'yz':
+            self.write('G19 ;YZ plane')  # YZ plane
+            dims = {
+                'y' : target[0],
+                'z' : target[1],
+                'j' : center[0],
+                'k' : center[1],
+            }
+            if helix_len:
+                dims['x'] = helix_len
+        elif plane == 'xz':
+            self.write('G18 ;XZ plane')  # XZ plane
+            dims = {
+                'x' : target[0],
+                'z' : target[1],
+                'i' : center[0],
+                'k' : center[1],
+            }
+            if helix_len:
+                dims['y'] = helix_len
+        else:
+            raise RuntimeError("Selected plane ('%s') is not one of ('xy', 'yz', 'xz')!" % plane)
+
+        if direction == 'CW':
+            command = 'G2'
+        elif direction == 'CCW':
+            command = 'G3'
+
+
+        args = self._format_args(**dims)
+
+        self.write('{} {}'.format(command, args))
 
         self._update_current_position(**dims)
 
@@ -907,7 +1005,7 @@ class G(object):
                 self._write_out(line)
 
         line = line.rstrip() + self.lineend  # add lineend character
-        if 'b' in self.out_fd.mode:  # encode the string to binary if needed
+        if hasattr(self.out_fd, 'mode') and 'b' in self.out_fd.mode:  # encode the string to binary if needed
             line = encode2To3(line)
         self.out_fd.write(line)
 
@@ -930,7 +1028,7 @@ class G(object):
             with open(self.header) as fd:
                 self._write_out(lines=fd.readlines())
 
-    def _format_args(self, x=None, y=None, z=None, **kwargs):
+    def _format_args(self, x=None, y=None, z=None, i=None, j=None, k=None, **kwargs):
         d = self.output_digits
         args = []
         if x is not None:
@@ -939,6 +1037,12 @@ class G(object):
             args.append('{0}{1:.{digits}f}'.format(self.y_axis, y, digits=d))
         if z is not None:
             args.append('{0}{1:.{digits}f}'.format(self.z_axis, z, digits=d))
+        if i is not None:
+            args.append('{0}{1:.{digits}f}'.format(self.i_axis, i, digits=d))
+        if j is not None:
+            args.append('{0}{1:.{digits}f}'.format(self.j_axis, j, digits=d))
+        if k is not None:
+            args.append('{0}{1:.{digits}f}'.format(self.k_axis, k, digits=d))
         args += ['{0}{1:.{digits}f}'.format(k, kwargs[k], digits=d) for k in sorted(kwargs)]
         args = ' '.join(args)
         return args
