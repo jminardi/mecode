@@ -214,6 +214,8 @@ class G(object):
         self.color_history = [(0, 0, 0)]
         self.speed = 0
         self.speed_history = []
+        self.extruding = [None,False]
+        self.extruding_history = []
 
         self._socket = None
         self._p = None
@@ -1268,6 +1270,10 @@ class G(object):
 
     def toggle_pressure(self, com_port):
         self.write('Call togglePress P{}'.format(com_port))
+        if self.extruding[0] == com_port:
+            self.extruding = [com_port, not self.extruding[1]]
+        else:
+            self.extruding = [com_port,True]
 
     def set_pressure(self, com_port, value):
         self.write('Call setPress P{} Q{}'.format(com_port, value))
@@ -1324,7 +1330,7 @@ class G(object):
 
     # Public Interface  #######################################################
 
-    def view(self, backend='matplotlib',outfile=None, color=False):
+    def view(self, backend='matplotlib', outfile=None, color_on=False,nozzle_cam=False):
         """ View the generated Gcode.
 
         Parameters
@@ -1394,6 +1400,176 @@ class G(object):
         elif backend == 'mayavi':
             from mayavi import mlab
             mlab.plot3d(history[:, 0], history[:, 1], history[:, 2])
+
+        elif backend == 'vpython':
+            import vpython as vp
+            import copy
+            
+            #Scene setup
+            vp.scene.width = 1080
+            vp.scene.height = 1080
+            vp.scene.center = vp.vec(0,0,0) 
+            vp.scene.forward = vp.vec(-1,-1,-1) 
+            vp.scene.background = vp.vec(1,1,1)
+            framerate = 60
+            fast_forward = 1  
+
+            position_hist = history
+            speed_hist = dict(self.speed_history)
+            extruding_hist = dict(self.extruding_history)
+            extruding_state = False
+            printheads = np.unique([i[1][0] for i in self.extruding_history][1:])
+            vpython_colors = [vp.color.red,vp.color.blue,vp.color.green,vp.color.cyan,vp.color.yellow,vp.color.magenta,vp.color.orange]
+            filament_color = dict(zip(printheads,vpython_colors[:len(printheads)]))
+
+            #Swap Y & Z axis for new coordinate system
+            position_hist[:,[1,2]] = position_hist[:,[2,1]]
+            #Swap Z direction
+            position_hist[:,2] *= -1
+
+            #Check all values are available for animation
+            if 0 in speed_hist.values():
+                raise ValueError('Cannot specify 0 for feedrate')
+
+            class Printhead(object):
+                def __init__(self, nozzle_diameter, nozzle_length, start_location=vp.vec(0,0,0), start_orientation=vp.vec(0,1,0)):
+                    #Record initialized position as current position
+                    self.current_position = start_location
+                    self.nozzle_length = nozzle_length
+                    self.nozzle_diameter = nozzle_diameter
+
+                    #Create a cylinder to act as the nozzle
+                    self.head = vp.cylinder(pos=start_location,
+                                        axis=nozzle_length*start_orientation, 
+                                        radius=nozzle_diameter/2, 
+                                        texture=vp.textures.metal)
+
+                    #Create trail for filament
+                    self.tail = []
+                    self.previous_head_position = copy.copy(self.head.pos)
+                    self.make_trail = False
+                    
+                    #Create Luer lock fitting
+                    cyl_outline = np.array([[0.2,0],
+                                   [1.2,1.4],
+                                   [1.2,5.15],
+                                   [2.4,8.7],
+                                   [2.6,15.6],
+                                   [2.4,15.6],
+                                   [2.2,8.7],
+                                   [1.0,5.15],
+                                   [1.0,1.4],
+                                   [0,0],
+                                   [0.2,0]])
+                    fins_outline_r = np.array([[1.2,2.9],
+                                   [3.0,3.7],
+                                   [3.25,15.6],
+                                   [2.6,15.6],
+                                   [2.4,8.7],
+                                   [1.2,5.15],
+                                   [1.2,2.9]])
+                    fins_outline_l = np.array([[-1.2,2.9],
+                                   [-3.0,3.7],
+                                   [-3.25,15.6],
+                                   [-2.6,15.6],
+                                   [-2.4,8.7],
+                                   [-1.2,5.15],
+                                   [-1.2,2.9]])
+                    cyl_outline[:,1] += nozzle_length
+                    fins_outline_r[:,1] += nozzle_length
+                    fins_outline_l[:,1] += nozzle_length
+                    cylpath = vp.paths.circle(radius=0.72/2)
+                    left_fin = vp.extrusion(path=[vp.vec(0,0,-0.1),vp.vec(0,0,0.1)],shape=fins_outline_r.tolist(),color=vp.color.blue,opacity=0.7,shininess=0.1)
+                    right_fin =vp.extrusion(path=[vp.vec(0,0,-0.1),vp.vec(0,0,0.1)],shape=fins_outline_l.tolist(),color=vp.color.blue,opacity=0.7,shininess=0.1)
+                    luer_body = vp.extrusion(path=cylpath, shape=cyl_outline.tolist(), color=vp.color.blue,opacity=0.7,shininess=0.1)
+                    luer_fitting = vp.compound([luer_body, right_fin, left_fin])
+
+                    #Create Nordson Barrel
+                    #Barrel_outline exterior
+                    first_part = [[5.25,0]]
+                    barrel_curve = np.array([[ 0.        , 0.        ],
+                                    [ 0.01538957,  0.19554308],
+                                    [ 0.06117935,  0.38627124],
+                                    [ 0.13624184,  0.56748812],
+                                    [ 0.23872876,  0.73473157],
+                                    [ 0.36611652,  0.88388348],
+                                    [ 0.9775778 ,  1.82249027],
+                                    [ 1.46951498,  2.73798544],
+                                    [ 1.82981493,  3.60782647],
+                                    [ 2.04960588,  4.41059499],
+                                    [ 2.12347584,  5.12652416]])
+                    barrel_curve *= 1.5
+                    barrel_curve[:,0] += 5.25
+                    barrel_curve[:,1] += 8.25
+                    last_part = [[9.2,17.0],
+                                 [9.2,80]]
+
+                    barrel_outline = np.append(first_part,barrel_curve,axis=0)
+                    barrel_outline = np.append(barrel_outline,last_part,axis=0)
+                    barrel_outline[:,0] -= 1
+                   
+                   #Create interior surface
+                    barrel_outline_inter = np.copy(np.flip(barrel_outline,axis=0))
+                    barrel_outline_inter[:,0] -= 2.5
+                    barrel_outline = np.append(barrel_outline,barrel_outline_inter,axis=0)
+                    barrel_outline = np.append(barrel_outline,[[4.25,0]],axis=0)
+                    barrel_outline[:,1] += 13 + nozzle_length
+
+                    barrelpath = vp.paths.circle(radius=2.0/2)
+                    barrel = vp.extrusion(path=barrelpath, shape=barrel_outline.tolist(), color=vp.color.gray(0.8),opacity=1.0,shininess=0.1)
+
+                    #Combine into single head
+                    self.body = vp.compound([barrel,luer_fitting],pos=start_location+vp.vec(0,nozzle_length+46.5,0))
+
+                def abs_move(self, endpoint, feed=2.0,print_line=True,tail_color = None):
+                    move_length = (endpoint - self.current_position).mag
+                    time_to_move = move_length/(feed*fast_forward)
+                    total_frames = round(time_to_move*framerate)
+
+                    #Create linspace of points between beginning and end
+                    inter_points = np.array([np.linspace(i,j,total_frames) for i,j in zip([self.current_position.x,self.current_position.y,self.current_position.z],[endpoint.x,endpoint.y,endpoint.z])])
+
+                    for inter_move in np.transpose(inter_points): 
+                        vp.rate(framerate)
+                        self.head.pos.x = self.body.pos.x = inter_move[0]
+                        self.head.pos.z = self.body.pos.z = inter_move[2]
+                        self.head.pos.y = inter_move[1]
+                        self.body.pos.y = inter_move[1]+self.nozzle_length+46.5
+                        
+                        if self.make_trail and print_line :  
+                            if (self.previous_head_position.x != self.head.pos.x) or (self.previous_head_position.y != self.head.pos.y) or (self.previous_head_position.z != self.head.pos.z):  
+                                self.tail[-1].append(pos=vp.vec(self.head.pos.x,self.head.pos.y-self.nozzle_diameter/2,self.head.pos.z))
+                        elif not self.make_trail and print_line:
+                            vp.sphere(pos=vp.vec(self.head.pos.x,self.head.pos.y-self.nozzle_diameter/2,self.head.pos.z),color=tail_color,radius=self.nozzle_diameter/2)
+                            self.tail.append(vp.curve(pos=vp.vec(self.head.pos.x,self.head.pos.y-self.nozzle_diameter/2,self.head.pos.z),color=tail_color,radius=self.nozzle_diameter/2))
+                        self.make_trail = print_line
+
+                        self.previous_head_position = copy.copy(self.head.pos)
+
+                        #Track tip of nozzle with camera if nozzle_cam mode is on
+                        if nozzle_cam:
+                            vp.scene.center = self.head.pos
+        
+                    #Set endpoint as current position
+                    self.current_position = endpoint
+
+            def run():
+                #Stepping through all moves after initial position
+                extrusing_state = False
+                for count, (pos, color) in enumerate(zip(position_hist[1:],self.color_history[1:]),1):
+                    X, Y, Z = pos
+                    if count in speed_hist:
+                        t_speed = speed_hist[count]
+                    if count in extruding_hist:
+                        extruding_state =  extruding_hist[count][1]
+                        t_color = filament_color[extruding_hist[count][0]] if extruding_hist[count][0] != None else vp.color.black
+                    self.head.abs_move(vp.vec(*pos),feed=t_speed,print_line=extruding_state,tail_color=t_color)
+
+            self.head = Printhead(nozzle_diameter=0.72,nozzle_length=30, start_location=vp.vec(*position_hist[0]))
+            vp.box(pos=vp.vec(0.0,-0.5,0.0),length=100, height=1, width=100,color=vp.color.gray(0.8))
+            vp.scene.waitfor('click')
+            run()
+
         else:
             raise Exception("Invalid plotting backend! Choose one of mayavi or matplotlib or matplotlib2d.")
 
@@ -1542,3 +1718,6 @@ class G(object):
         if (len(self.speed_history) == 0
             or self.speed_history[-1][1] != self.speed):
             self.speed_history.append((len_history - 1, self.speed))
+        if (len(self.extruding_history) == 0
+            or self.extruding_history[-1][1] != self.extruding):
+            self.extruding_history.append((len_history - 1, self.extruding))
