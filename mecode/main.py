@@ -1238,9 +1238,8 @@ class G(object):
         if was_relative:
                 self.relative()
 
-    def purge_meander(self, x, y, spacing, volume_fraction, start='LL', orientation='x',
+    def purge_meander(self, x, y, spacing, volume_fraction, flowrate, start='LL', orientation='x',
             tail=False, minor_feed=None):
-        flowrate = 0.033333
         self.write('FREERUN a {}'.format(flowrate*volume_fraction))
         self.write('FREERUN b {}'.format(flowrate*(1-volume_fraction)))
         self.meander(x, y, spacing, start=start, orientation=orientation,
@@ -1350,10 +1349,10 @@ class G(object):
             fig = plt.figure()
             ax = fig.gca(projection='3d')
 
-            if color:
+            if color_on:
                 for index in [x+2 for x in range(len(history[1:-1])-3)]:
                     X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]                
-                    ax.plot(X, Y, Z,color = cm.gray(self.color_history[index])[:-1],linewidth=4.5)
+                    ax.plot(X, Y, Z,color = cm.gray(self.color_history[index])[:-1],linewidth=1.5)
             else:
                 X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
                 ax.plot(X, Y, Z)
