@@ -1217,7 +1217,9 @@ class G(object):
 
     # Public Interface  #######################################################
 
-    def view(self, backend='matplotlib', outfile=None, color_on=False,nozzle_cam=False):
+    def view(self, backend='matplotlib', outfile=None, color_on=False, nozzle_cam=False, 
+             fast_forward = 3, framerate = 60, nozzle_dims=[1.0,20.0], 
+             substrate_dims=[0.0,0.0,-0.5-28,100,1,100], scene_dims = [720,720]):
         """ View the generated Gcode.
 
         Parameters
@@ -1225,6 +1227,37 @@ class G(object):
         backend : str (default: 'matplotlib')
             The plotting backend to use, one of 'matplotlib' or 'mayavi'.
             'matplotlib2d' has been addded to better visualize mixing.
+            'vpython' has been added to generate printing animations
+            for debugging.
+        outfile : str (default: 'None')
+            When using the 'matplotlib' or 'matplotlib2d' backend,
+            an image of the output will be save to the location specified
+            here.
+        color_on : bool (default: 'False')
+            When using the 'matplotlib' or 'matplotlib2d' backend,
+            the generated image will display the color associated
+            with the g.move command. This was primarily used for mixing
+            nozzle debugging.
+        nozzle_cam : bool (default: 'False')
+            When using the 'vpython' backend and nozzle_cam is set to 
+            True, the camera will remained centered on the tip of the 
+            nozzle during the animation.
+        fast_forward : int (default: 1)
+            When using the 'vpython' backend, the animation can be
+            sped up by the factor specified in the fast_forward 
+            parameter.
+        nozzle_dims : list (default: [1.0,20.0])
+            When using the 'vpython' backend, the dimensions of the 
+            nozzle can be specified using a list in the format:
+            [nozzle_diameter, nozzle_length].
+        substrate_dims: list (default: [0.0,0.0,-0.5,100,1,100])
+            When using the 'vpython' backend, the dimensions of the 
+            planar substrate can be specified using a list in the 
+            format: [x, y, z, length, height, width].
+        scene_dims: list (default: [720,720])
+            When using the 'vpython' bakcend, the dimensions of the
+            viewing window can be specified using a list in the 
+            format: [width, height]
 
         """
         import numpy as np
@@ -1294,13 +1327,11 @@ class G(object):
             import copy
             
             #Scene setup
-            vp.scene.width = 1080
-            vp.scene.height = 1080
+            vp.scene.width = scene_dims[0]
+            vp.scene.height = scene_dims[1]
             vp.scene.center = vp.vec(0,0,0) 
             vp.scene.forward = vp.vec(-1,-1,-1) 
             vp.scene.background = vp.vec(1,1,1)
-            framerate = 60
-            fast_forward = 1  
 
             position_hist = history
             speed_hist = dict(self.speed_history)
@@ -1453,13 +1484,13 @@ class G(object):
                         t_color = filament_color[extruding_hist[count][0]] if extruding_hist[count][0] != None else vp.color.black
                     self.head.abs_move(vp.vec(*pos),feed=t_speed,print_line=extruding_state,tail_color=t_color)
 
-            self.head = Printhead(nozzle_diameter=0.72,nozzle_length=30, start_location=vp.vec(*position_hist[0]))
-            vp.box(pos=vp.vec(0.0,-0.5,0.0),length=100, height=1, width=100,color=vp.color.gray(0.8))
+            self.head = Printhead(nozzle_diameter=nozzle_dims[0],nozzle_length=nozzle_dims[1], start_location=vp.vec(*position_hist[0]))
+            vp.box(pos=vp.vec(substrate_dims[0],substrate_dims[2],substrate_dims[1]),length=substrate_dims[3], height=substrate_dims[4], width=substrate_dims[5],color=vp.color.gray(0.8))
             vp.scene.waitfor('click')
             run()
 
         else:
-            raise Exception("Invalid plotting backend! Choose one of mayavi or matplotlib or matplotlib2d.")
+            raise Exception("Invalid plotting backend! Choose one of mayavi or matplotlib or matplotlib2d or vpython.")
 
     def write(self, statement_in, resp_needed=False):
         if self.print_lines:
