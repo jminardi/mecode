@@ -5,11 +5,35 @@ from time import sleep, time
 
 import serial
 
+# for python 2/3 compatibility
 try:
     reduce
 except NameError:
     # In python 3, reduce is no longer imported by default.
     from functools import reduce
+
+try:
+    isinstance("", basestring)
+
+    def is_str(s):
+        return isinstance(s, basestring)
+
+    def encode2To3(s):
+        return s
+
+    def decode2To3(s):
+        return s
+
+except NameError:
+
+    def is_str(s):
+        return isinstance(s, str)
+
+    def encode2To3(s):
+        return bytes(s, 'UTF-8')
+
+    def decode2To3(s):
+        return s.decode('UTF-8')
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -337,7 +361,7 @@ class Printer(object):
                     self._ok_received.wait(1)
                 line = self._next_line()
                 with self._communication_lock:
-                    self.s.write(line)
+                    self.s.write(encode2To3(line))
                     self._ok_received.clear()
                     self._current_line_idx += 1
                 # Grab the just sent line without line numbers or checksum
@@ -355,7 +379,7 @@ class Printer(object):
         full_resp = ''
         while not self.stop_reading:
             if self.s is not None:
-                line = self.s.readline()
+                line = decode2To3(self.s.readline())
                 if line.startswith('Resend: '):  # example line: "Resend: 143"
                     self._current_line_idx = int(line.split()[1]) - 1 + self._reset_offset
                     logger.debug('Resend Requested - {}'.format(line.strip()))
