@@ -55,9 +55,8 @@ This software was developed by the Lewis Lab at Harvard University and Voxel8 In
 
 import math
 import os
+import numpy as np
 from collections import defaultdict
-
-from printer import Printer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -377,6 +376,13 @@ class G(object):
         If an absolute movement is desired, the `abs_move` method is
         recommended instead.
 
+        points : floats
+            Must specify endpoint as kwargs, e.g. x=5, y=5
+        rapid : Bool (default: False)
+            Executes an uncoordinated move to the specified location.
+        color : float or string
+            Specifies a color to be added to color history for viewing.
+
         Examples
         --------
         >>> # move the tool head 10 mm in x and 10 mm in y
@@ -440,16 +446,17 @@ class G(object):
             self.extrude = True
 
     def arc(self, x=None, y=None, z=None, direction='CW', radius='auto',
-            helix_dim=None, helix_len=0, **kwargs):
+            helix_dim=None, helix_len=0, linearize=True, **kwargs):
         """ Arc to the given point with the given radius and in the given
         direction. If helix_dim and helix_len are specified then the tool head
         will also perform a linear movement through the given dimension while
-        completing the arc.
+        completing the arc. Note: Helix and flow calculation do not currently 
+        work with linearize.
 
         Parameters
         ----------
         points : floats
-            Must specify two points as kwargs, e.g. x=5, y=5
+            Must specify endpoint as kwargs, e.g. x=5, y=5
         direction : str (either 'CW' or 'CCW') (default: 'CW')
             The direction to execute the arc in.
         radius : 'auto' or float (default: 'auto')
@@ -460,6 +467,8 @@ class G(object):
             The linear dimension to complete the helix through
         helix_len : float
             The length to move in the linear helix dimension.
+        linearize : Bool (default: True)
+            Represent the arc as a series of straight lines.
 
         Examples
         --------
@@ -508,12 +517,38 @@ class G(object):
         values = [v for v in dims.values()]
         if self.is_relative:
             dist = math.sqrt(values[0] ** 2 + values[1] ** 2)
+            vect_dir= [values[0]/dist,values[1]/dist]
+            if direction == 'CW':
+                arc_rotation_matrix = np.matrix([[0, -1],[1, 0]])
+            elif direction =='CCW':
+                arc_rotation_matrix = np.matrix([[0, 1],[-1, 0]])
+            perp_vect_dir = np.array(vect_dir)*arc_rotation_matrix
+            a_vect= np.array([values[0]/2,values[1]/2])
+            b_length = math.sqrt(radius**2-(dist/2)**2)
+            b_vect = b_length*perp_vect_dir
+            c_vect = a_vect+b_vect
+            center_coords = c_vect
+            final_pos = a_vect*2-c_vect 
+            initial_pos = -c_vect
         else:
             k = [ky for ky in dims.keys()]
             cp = self._current_position
             dist = math.sqrt(
                 (cp[k[0]] - values[0]) ** 2 + (cp[k[1]] - values[1]) ** 2
             )
+            vect_dir= [(values[0]-cp[k[0]])/dist,(values[1]-cp[k[1]])/dist]
+            if direction == 'CW':
+                arc_rotation_matrix = np.matrix([[0, -1],[1, 0]])
+            elif direction =='CCW':
+                arc_rotation_matrix = np.matrix([[0, 1],[-1, 0]])
+            perp_vect_dir = np.array(vect_dir)*arc_rotation_matrix
+            a_vect = np.array([(values[0]-cp[k[0]])/2.0,(values[1]-cp[k[1]])/2.0])
+            b_length = math.sqrt(radius**2-(dist/2)**2)
+            b_vect = b_length*perp_vect_dir
+            c_vect = a_vect+b_vect
+            center_coords = np.array(cp[k[:2]])+c_vect
+            final_pos = np.array(cp[k[:2]])+a_vect*2-c_vect
+            initial_pos = np.array(cp[k[:2]])
         if radius == 'auto':
             radius = dist / 2.0
         elif abs(radius) < dist / 2.0:
@@ -541,19 +576,48 @@ class G(object):
             filament_length = ((4*volume)/(3.14149*self.filament_diameter**2))*self.extrusion_multiplier
             dims['E'] = filament_length + current_extruder_position
 
-        if axis is not None:
-            self.write('G16 X Y {} {}coordinate axis assignment'.format(axis, self.comment_char))  # coordinate axis assignment
-        self.write(plane_selector)
-        args = self._format_args(**dims)
-        if helix_dim is None:
-            self.write('{0} {1} R{2:.{digits}f}'.format(command, args, radius,
-                                                        digits=self.output_digits))
-        else:
-            self.write('{0} {1} R{2:.{digits}f} G1 {3}{4}'.format(
-                command, args, radius, helix_dim.upper(), helix_len, digits=self.output_digits))
-            dims[helix_dim] = helix_len
+        if linearize:
+            #Curved formed from straight lines
+            final_pos = np.array(final_pos.tolist()).flatten()
+            initial_pos = np.array(initial_pos.tolist()).flatten()
+            final_angle = np.arctan2(final_pos[1],final_pos[0])
+            initial_angle = np.arctan2(initial_pos[1],initial_pos[0])
+            
+            if direction == 'CW':
+                angle_difference = 2*np.pi-(final_angle-initial_angle)%(2*np.pi)
+            elif direction == 'CCW':
+                angle_difference = (initial_angle-final_angle)%(-2*np.pi)
 
-        self._update_current_position(**dims)
+            step_range = [0, angle_difference]
+            step_size = np.pi/16
+            angle_step = np.arange(step_range[0],step_range[1]+np.sign(angle_difference)*step_size,np.sign(angle_difference)*step_size)
+            
+            segments = []
+            for angle in angle_step:
+                radius_vect = -c_vect
+                radius_rotation_matrix = np.matrix([[math.cos(angle), -math.sin(angle)],
+                                 [math.sin(angle), math.cos(angle)]])
+                int_point = radius_vect*radius_rotation_matrix
+                segments.append(int_point)
+            
+            for i in range(len(segments)-1):
+                move_line = segments[i+1]-segments[i]
+                self.move(*move_line.tolist()[0])
+        else:
+            #Standard output
+            if axis is not None:
+                self.write('G16 X Y {} {}coordinate axis assignment'.format(axis, self.comment_char))  # coordinate axis assignment
+            self.write(plane_selector)
+            args = self._format_args(**dims)
+            if helix_dim is None:
+                self.write('{0} {1} R{2:.{digits}f}'.format(command, args, radius,
+                                                            digits=self.output_digits))
+            else:
+                self.write('{0} {1} R{2:.{digits}f} G1 {3}{4}'.format(
+                    command, args, radius, helix_dim.upper(), helix_len, digits=self.output_digits))
+                dims[helix_dim] = helix_len
+
+            self._update_current_position(**dims)
 
 
     def arc_ijk(self, target, center, plane, direction='CW', helix_len=None):
@@ -705,6 +769,116 @@ class G(object):
                 self.move(x=-x)
                 self.move(y=-y)
                 self.move(x=x)
+
+    def round_rect(self, x, y, direction='CW', start='LL', radius=0, linearize=True):
+        """ Trace a rectangle with the given width and height with rounded corners,
+            note that starting point is not actually in corner of rectangle.
+
+        Parameters
+        ----------
+        x : float
+            The width of the rectangle in the x dimension.
+        y : float
+            The height of the rectangle in the y dimension.
+        direction : str (either 'CW' or 'CCW') (default: 'CW')
+            Which direction to complete the rectangle in.
+        start : str (either 'LL', 'UL', 'LR', 'UR') (default: 'LL')
+            The start of the rectangle -  L/U = lower/upper, L/R = left/right
+            This assumes an origin in the lower left.
+        radius : radius of the corners of the rectangle
+
+        Examples
+        --------
+        >>> # trace a 10x10 clockwise square with radius of 3, starting in the lower left corner
+        >>> g.round_rect(10, 10, radius=3)
+
+        >>> # 1x5 counterclockwise rect with radius of 2 starting in the upper right corner
+        >>> g.round_rect(1, 5, direction='CCW', start='UR', radius=2)
+         
+                                    ______________ 
+                                   /              \
+                                  /                \
+        starts here for 'UL' - > |                  | <- starts here for 'UR'
+                                 |                  |
+        starts here for 'LL' - > |                  | <- starts here for 'LR'
+                                  \                /
+                                   \______________/
+
+        """
+        if direction == 'CW':
+            if start.upper() == 'LL':
+                self.move(y=y-2*radius)
+                self.arc(x=radius,y=radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(x=x-2*radius)
+                self.arc(x=radius,y=-radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(y=-(y-2*radius))
+                self.arc(x=-radius,y=-radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(x=-(x-2*radius))
+                self.arc(x=-radius,y=radius,direction='CW',radius=radius, linearize=linearize)
+            elif start.upper() == 'UL':
+                self.arc(x=radius,y=radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(x=x-2*radius)
+                self.arc(x=radius,y=-radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(y=-(y-2*radius))
+                self.arc(x=-radius,y=-radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(x=-(x-2*radius))
+                self.arc(x=-radius,y=radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(y=y-2*radius)
+            elif start.upper() == 'UR':
+                self.move(y=-(y-2*radius))
+                self.arc(x=-radius,y=-radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(x=-(x-2*radius))
+                self.arc(x=-radius,y=radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(y=y-2*radius)
+                self.arc(x=radius,y=radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(x=x-2*radius)
+                self.arc(x=radius,y=-radius,direction='CW',radius=radius, linearize=linearize)
+            elif start.upper() == 'LR':
+                self.arc(x=-radius,y=-radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(x=-(x-2*radius))
+                self.arc(x=-radius,y=radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(y=y-2*radius)
+                self.arc(x=radius,y=radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(x=x-2*radius)
+                self.arc(x=radius,y=-radius,direction='CW',radius=radius, linearize=linearize)
+                self.move(y=-(y-2*radius))
+        elif direction == 'CCW':
+            if start.upper() == 'LL':
+                self.arc(x=radius,y=-radius,direction='CCW',radius=radius, linearize=linearize)
+                self.move(x=x-2*radius)
+                self.arc(x=radius,y=radius,direction='CCW',radius=radius, linearize=linearize)
+                self.move(y=y-2*radius)
+                self.arc(x=-radius,y=radius,direction='CCW',radius=radius, linearize=linearize)    
+                self.move(x=-(x-2*radius))
+                self.arc(x=-radius,y=-radius,direction='CCW',radius=radius, linearize=linearize)
+                self.move(y=-(y-2*radius))
+            elif start.upper() == 'UL':
+                self.move(y=-(y-2*radius))
+                self.arc(x=radius,y=-radius,direction='CCW',radius=radius, linearize=linearize)
+                self.move(x=x-2*radius)
+                self.arc(x=radius,y=radius,direction='CCW',radius=radius, linearize=linearize)
+                self.move(y=y-2*radius)
+                self.arc(x=-radius,y=radius,direction='CCW',radius=radius, linearize=linearize)    
+                self.move(x=-(x-2*radius))
+                self.arc(x=-radius,y=-radius,direction='CCW',radius=radius, linearize=linearize)
+            elif start.upper() == 'UR':
+                self.arc(x=-radius,y=radius,direction='CCW',radius=radius, linearize=linearize) 
+                self.move(x=-(x-2*radius))
+                self.arc(x=-radius,y=-radius,direction='CCW',radius=radius, linearize=linearize)
+                self.move(y=-(y-2*radius))
+                self.arc(x=radius,y=-radius,direction='CCW',radius=radius, linearize=linearize)
+                self.move(x=x-2*radius)
+                self.arc(x=radius,y=radius,direction='CCW',radius=radius, linearize=linearize)
+                self.move(y=y-2*radius)   
+            elif start.upper() == 'LR':
+                self.move(y=y-2*radius)
+                self.arc(x=-radius,y=radius,direction='CCW',radius=radius, linearize=linearize)    
+                self.move(x=-(x-2*radius))
+                self.arc(x=-radius,y=-radius,direction='CCW',radius=radius, linearize=linearize)
+                self.move(y=-(y-2*radius))
+                self.arc(x=radius,y=-radius,direction='CCW',radius=radius, linearize=linearize)
+                self.move(x=x-2*radius)
+                self.arc(x=radius,y=radius,direction='CCW',radius=radius, linearize=linearize)
 
     def meander(self, x, y, spacing, start='LL', orientation='x', tail=False,
                 minor_feed=None):
@@ -924,7 +1098,6 @@ class G(object):
         >>> g.spiral(20,1,8,direction='CCW',center_position=[0,50])
         
         """
-        import numpy as np
         start_spiral_turns = (start_diameter/2.0)/spacing
         end_spiral_turns = (end_diameter/2.0)/spacing
         
@@ -1024,7 +1197,6 @@ class G(object):
         ...     gradient="-0.322*r**2 - 6.976*r + 131.892") #Any function
         """
 
-        import numpy as np
         import sympy as sy
 
         def calculate_extrusion_values(radius, length, feed = feedrate, flow = flowrate, formula = gradient, delay = dead_delay, spacing = spacing, start = start, outer_radius = end_diameter/2.0, inner_radius=start_diameter/2.0):
@@ -1316,6 +1488,20 @@ class G(object):
                 letter >>= 1
         return data +'{:02X}'.format(CRC8)
 
+    def exportToAPE(self):
+        #Export coordinates to APE
+        extruding_hist = dict(self.extruding_history)
+        position_hist = self.position_history
+        cut_ranges=[*extruding_hist][1:]
+        final_coords = []
+        for i in range(0,len(cut_ranges),2):
+            final_coords.append(position_hist[cut_ranges[i]-1:cut_ranges[i+1]])
+        final_coords_dict = []
+        for i in final_coords:
+            keys = ['x','z','y']
+            final_coords_dict.append([dict(zip(keys, l)) for l in i ])
+        return final_coords_dict
+
     # Shapie Specific Functions  ##############################################
 
     def read_laser(self):
@@ -1331,7 +1517,7 @@ class G(object):
 
     def view(self, backend='matplotlib', outfile=None, color_on=False, nozzle_cam=False, 
              fast_forward = 3, framerate = 60, nozzle_dims=[1.0,20.0], 
-             substrate_dims=[0.0,0.0,-0.5-28,100,1,100], scene_dims = [720,720]):
+             substrate_dims=[0.0,0.0,-1.0,300,1,300], scene_dims = [720,720]):
         """ View the generated Gcode.
 
         Parameters
@@ -1372,7 +1558,6 @@ class G(object):
             format: [width, height]
 
         """
-        import numpy as np
         import matplotlib.cm as cm
         from mpl_toolkits.mplot3d import Axes3D
         import matplotlib.pyplot as plt
@@ -1624,6 +1809,7 @@ class G(object):
                     return response[1:-1]
             elif self.direct_write_mode == 'serial':
                 if self._p is None:
+                    from .printer import Printer
                     self._p = Printer(self.printer_port, self.baudrate)
                     self._p.connect()
                     self._p.start()
