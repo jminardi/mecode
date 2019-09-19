@@ -1328,6 +1328,19 @@ class G(object):
         self.write(r'LOADCALFILE "{}", 2D_CAL'.format(path))
 
     def toggle_pressure(self, com_port):
+        """ Toggles (On/Off) Nordson Ultimus V Pressure Controllers.
+
+        Parameters
+        ----------
+        com_port : int
+            The com port to communicate over RS-232
+
+        Examples
+        --------
+        >>> #Turn on pressure on com 3
+        >>> g.toggle_pressure(3)
+
+        """
         self.write('Call togglePress P{}'.format(com_port))
         if self.extruding[0] == com_port:
             self.extruding = [com_port, not self.extruding[1]]
@@ -1335,21 +1348,83 @@ class G(object):
             self.extruding = [com_port,True]
 
     def set_pressure(self, com_port, value):
+        """ Sets pressure on Nordson Ultimus V Pressure Controllers.
+
+        Parameters
+        ----------
+        com_port : int
+            The com port to communicate over RS-232.
+        value : float
+            The pressure value to set.
+        Examples
+        --------
+        >>> #Set pressure on com 3 to 50.
+        >>> g.set_pressure(com_port=3, value=50)
+
+        """
         self.write('Call setPress P{} Q{}'.format(com_port, value))
 
     def set_vac(self, com_port, value):
+        """ Same as `set_pressure` method, but for vacuum.
+        """
         self.write('Call setVac P{} Q{}'.format(com_port, value))
 
     def set_valve(self, num, value):
+        """ Sets a digital output state (typically for valve).
+
+        Parameters
+        ----------
+        num : int
+            The com port to communicate over RS-232.
+        value : bool
+            On or off (1 or 0).
+        Examples
+        --------
+        >>> #Turn on valve 2
+        >>> g.set_valve(num=2, value=1)
+
+        """
         self.write('$DO{}.0={}'.format(num, value))
 
     def omni_on(self, com_port):
+        """ Opens the iris for the omnicure.
+
+        Parameters
+        ----------
+        com_port : int
+            The com port to communicate over RS-232
+
+        Examples
+        --------
+        >>> #Turn on omnicure on com 3.
+        >>> g.omni_on(3)
+
+        """
         self.write('Call omniOn P{}'.format(com_port))
 
     def omni_off(self, com_port):
+        """ Opposite to omni_on.
+        """
         self.write('Call omniOff P{}'.format(com_port))
 
     def omni_intensity(self, com_port, value, cal=False):
+        """ Sets the intensity of the omnicure.
+
+        Parameters
+        ----------
+        com_port : int
+            The com port to communicate over RS-232.
+        value : float
+            The intensity value to set.
+        cal : bool
+            Whether the omnicure is calibrated or not.
+        Examples
+        --------
+        >>> #Set omnicure intensity on com 3 to 50%.
+        >>> g.omni_intensity(com_port=3, value=50)
+
+        """
+
         if cal:
             command = 'SIR{:.2f}'.format(value)
             data = self.calc_CRC8(command)
@@ -1361,6 +1436,8 @@ class G(object):
         self.write('Call omniSetInt P{}'.format(com_port))
 
     def set_alicat_pressure(self,com_port,value):
+        """ Same as `set_pressure` method, but for Alicat controller.
+        """
         self.write('Call setAlicatPress P{} Q{}'.format(com_port, value))
 
     def calc_CRC8(self,data):
@@ -1377,7 +1454,15 @@ class G(object):
         return data +'{:02X}'.format(CRC8)
 
     def exportToAPE(self):
-        #Export coordinates to APE
+        """ Exports a list of dictionaries describing extrusion moves in a 
+        format compatible with APE.
+
+        Examples
+        --------
+        >>> #Write print ge
+        >>> geometry_def = g.meander()
+
+        """
         extruding_hist = dict(self.extruding_history)
         position_hist = self.position_history
         cut_ranges=[*extruding_hist][1:]
@@ -1389,17 +1474,6 @@ class G(object):
             keys = ['x','z','y']
             final_coords_dict.append([dict(zip(keys, l)) for l in i ])
         return final_coords_dict
-
-    # Shapie Specific Functions  ##############################################
-
-    def read_laser(self):
-        self.write('G4 P1')
-        try:
-            val = float(self.write('M54',resp_needed=True).split('ok')[0])
-            return val
-        except:
-            raise ValueError("Failed to receive data from laser.")
-        return val
 
     # Public Interface  #######################################################
 
