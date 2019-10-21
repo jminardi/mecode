@@ -929,7 +929,6 @@ class G(object):
             import matplotlib.pyplot as plt
             fig = plt.figure()
             ax = fig.gca(projection='3d')
-            ax.set_aspect('equal')
             X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
             ax.plot(X, Y, Z)
 
