@@ -13,6 +13,37 @@ import serial
 
 from mecode.printer import Printer
 
+# for python 2/3 compatibility
+try:
+    reduce
+except NameError:
+    # In python 3, reduce is no longer imported by default.
+    from functools import reduce
+
+try:
+    isinstance("", basestring)
+
+    def is_str(s):
+        return isinstance(s, basestring)
+
+    def encode2To3(s):
+        return s
+
+    def decode2To3(s):
+        return s
+
+except NameError:
+
+    def is_str(s):
+        return isinstance(s, str)
+
+    def encode2To3(s):
+        return bytes(s, 'UTF-8')
+
+    def decode2To3(s):
+        return s.decode('UTF-8')
+
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -21,7 +52,7 @@ class TestPrinter(unittest.TestCase):
     def setUp(self):
         self.p = Printer()
         self.p.s = Mock(spec=serial.Serial(), name='MockSerial')
-        self.p.s.readline.return_value = 'ok\n'
+        self.p.s.readline.return_value = encode2To3('ok\n')
         self.p.s.timeout = 1
         self.p.s.writeTimeout = 1
 
@@ -57,13 +88,13 @@ class TestPrinter(unittest.TestCase):
         self.p.sendline(testline)
         while len(self.p.sentlines) == 0:
             sleep(0.01)
-        self.p.s.write.assert_called_with('N1 no new line*44\n')
+        self.p.s.write.assert_called_with(encode2To3('N1 no new line*44\n'))
 
         testline = 'with new line\n'
         self.p.sendline(testline)
         while len(self.p.sentlines) == 1:
             sleep(0.01)
-        self.p.s.write.assert_called_with('N2 with new line*44\n')
+        self.p.s.write.assert_called_with(encode2To3('N2 with new line*44\n'))
 
     def test_start(self):
         self.assertIsNone(self.p._read_thread)

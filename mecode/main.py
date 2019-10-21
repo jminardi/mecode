@@ -28,8 +28,17 @@ instantiating the `G` object. ::
 
     g = G(outfile='path/to/file.gcode', print_lines=False)
 
-*NOTE:* `g.teardown()` must be called after all commands are executed if you
-are writing to a file.
+*NOTE:* When using the option direct_write=True or when writing to a file, 
+`g.teardown()` must be called after all commands are executed. If you
+are writing to a file, this can be accomplished automatically by using G as
+a context manager like so:
+
+```python
+with G(outfile='file.gcode') as g:
+    g.move(10)
+```
+
+When the `with` block is exited, `g.teardown()` will be automatically called.
 
 The resulting toolpath can be visualized in 3D using the `mayavi` package with
 the `view()` method ::
