@@ -26,11 +26,11 @@ g.home()  # move the tool head to the origin (0, 0)
 ```
 
 By default `mecode` simply prints the generated GCode to stdout. If instead you
-want to generate a file, you can pass a filename and turn off the printing when
+want to generate a file, you can pass a filename when
 instantiating the `G` object.
 
 ```python
-g = G(outfile='path/to/file.gcode', print_lines=False)
+g = G(outfile='path/to/file.gcode')
 ```
 
 *NOTE:* When using the option direct_write=True or when writing to a file, 
@@ -54,8 +54,7 @@ g.meander(10, 10, 1)
 g.view()
 ```
 
-The graphics backend can be specified when calling the `view()` method, e.g. `g.view('matplotlib')`.
-`mayavi` is the default graphics backend.
+The graphics backend can be specified when calling the `view()` method, e.g. `g.view('mayavi')`.
 
 Direct control via serial communication
 ---------------------------------------
