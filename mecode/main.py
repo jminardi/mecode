@@ -23,10 +23,9 @@ desired tool path. ::
     g.home()  # move the tool head to the origin (0, 0)
 
 By default `mecode` simply prints the generated GCode to stdout. If instead you
-want to generate a file, you can pass a filename and turn off the printing when
-instantiating the `G` object. ::
+want to generate a file, you can pass a filename. ::
 
-    g = G(outfile='path/to/file.gcode', print_lines=False)
+    g = G(outfile='path/to/file.gcode')
 
 *NOTE:* When using the option direct_write=True or when writing to a file, 
 `g.teardown()` must be called after all commands are executed. If you
@@ -40,7 +39,7 @@ with G(outfile='file.gcode') as g:
 
 When the `with` block is exited, `g.teardown()` will be automatically called.
 
-The resulting toolpath can be visualized in 3D using the `mayavi` package with
+The resulting toolpath can be visualized in 3D with
 the `view()` method ::
 
     g = G()
@@ -89,8 +88,8 @@ except NameError:
 
 class G(object):
 
-    def __init__(self, outfile=None, print_lines=True, header=None, footer=None,
-                 aerotech_include=True,
+    def __init__(self, outfile=None, print_lines='auto', header=None, footer=None,
+                 aerotech_include=False,
                  output_digits=6,
                  direct_write=False,
                  direct_write_mode='socket',
@@ -117,15 +116,16 @@ class G(object):
         outfile : path or None (default: None)
             If a path is specified, the compiled gcode will be writen to that
             file.
-        print_lines : bool (default: True)
-            Whether or not to print the compiled GCode to stdout
+        print_lines : bool (default: 'auto')
+            Whether or not to print the compiled GCode to stdout. If set to
+            'auto' then lines will be printed if no outfile given.
         header : path or None (default: None)
             Optional path to a file containing lines to be written at the
             beginning of the output file
         footer : path or None (default: None)
             Optional path to a file containing lines to be written at the end
             of the output file.
-        aerotech_include : bool (default: True)
+        aerotech_include : bool (default: False)
             If true, add aerotech specific functions and var defs to outfile.
         output_digits : int (default: 6)
             How many digits to include after the decimal in the output gcode.
@@ -912,7 +912,7 @@ class G(object):
 
     # Public Interface  #######################################################
 
-    def view(self, backend='mayavi'):
+    def view(self, backend='matplotlib'):
         """ View the generated Gcode.
 
         Parameters
@@ -954,7 +954,7 @@ class G(object):
             raise Exception("Invalid plotting backend! Choose one of mayavi or matplotlib.")
 
     def write(self, statement_in, resp_needed=False):
-        if self.print_lines:
+        if self.print_lines or (self.print_lines == 'auto' and self.outfile is None):
             print(statement_in)
         self._write_out(statement_in)
         statement = encode2To3(statement_in + self.lineend)
