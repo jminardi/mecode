@@ -109,7 +109,8 @@ class G(object):
                  extrusion_width=0.35,
                  extrusion_multiplier=1,
                  setup=True,
-                 lineend='os'):
+                 lineend='os',
+                 comment_char=';'):
         """
         Parameters
         ----------
@@ -176,6 +177,8 @@ class G(object):
             Line ending to use when writing to a file or printer. The special
             value 'os' can be passed to fall back on python's automatic
             lineending insertion.
+        comment_char : str (default: ';')
+            Character to use when outputting comments.
 
         """
         self.outfile = outfile
@@ -196,6 +199,7 @@ class G(object):
         self.i_axis = i_axis
         self.j_axis = j_axis
         self.k_axis = k_axis
+        self.comment_char = comment_char
 
         self._current_position = defaultdict(float)
         self.is_relative = True
@@ -268,7 +272,7 @@ class G(object):
         """
         args = self._format_args(x, y, z, **kwargs)
         space = ' ' if len(args) > 0 else ''
-        self.write('G92' + space + args + ' ;set home');
+        self.write('G92' + space + args + ' {}set home'.format(self.comment_char))
 
         self._update_current_position(mode='absolute', x=x, y=y, z=z, **kwargs)
 
@@ -278,7 +282,7 @@ class G(object):
         # FIXME This does not work with internal current_position
         # FIXME You must call an abs_move after this to re-sync
         # current_position
-        self.write('G92.1 ;reset position to machine coordinates without moving')
+        self.write('G92.1 {}reset position to machine coordinates without moving'.format(self.comment_char))
 
     def relative(self):
         """ Enter relative movement mode, in general this method should not be
@@ -286,7 +290,7 @@ class G(object):
 
         """
         if not self.is_relative:
-            self.write('G91 ;relative')
+            self.write('G91 {}relative'.format(self.comment_char))
             self.is_relative = True
 
     def absolute(self):
@@ -295,7 +299,7 @@ class G(object):
 
         """
         if self.is_relative:
-            self.write('G90 ;absolute')
+            self.write('G90 {}absolute'.format(self.comment_char))
             self.is_relative = False
 
     def feed(self, rate):
@@ -330,9 +334,9 @@ class G(object):
         """
         self._write_header()
         if self.is_relative:
-            self.write('G91 ;relative')
+            self.write('G91 {}relative'.format(self.comment_char))
         else:
-            self.write('G90 ;absolute')
+            self.write('G90 {}absolute'.format(self.comment_char))
 
     def teardown(self, wait=True):
         """ Close the outfile file after writing the footer if opened. This
@@ -478,14 +482,14 @@ class G(object):
             raise RuntimeError(msg)
         dimensions = [k.lower() for k in dims.keys()]
         if 'x' in dimensions and 'y' in dimensions:
-            plane_selector = 'G17 ;XY plane'  # XY plane
+            plane_selector = 'G17 {}XY plane'.format(self.comment_char)  # XY plane
             axis = helix_dim
         elif 'x' in dimensions:
-            plane_selector = 'G18 ;XZ plane'  # XZ plane
+            plane_selector = 'G18 {}XZ plane'.format(self.comment_char)  # XZ plane
             dimensions.remove('x')
             axis = dimensions[0].upper()
         elif 'y' in dimensions:
-            plane_selector = 'G19 ;YZ plane'  # YZ plane
+            plane_selector = 'G19 {}YZ plane'.format(self.comment_char)  # YZ plane
             dimensions.remove('y')
             axis = dimensions[0].upper()
         else:
@@ -535,7 +539,7 @@ class G(object):
             dims['E'] = filament_length + current_extruder_position
 
         if axis is not None:
-            self.write('G16 X Y {} ;coordinate axis assignment'.format(axis))  # coordinate axis assignment
+            self.write('G16 X Y {} {}coordinate axis assignment'.format(axis, self.comment_char))  # coordinate axis assignment
         self.write(plane_selector)
         args = self._format_args(**dims)
         if helix_dim is None:
@@ -578,7 +582,7 @@ class G(object):
             raise RuntimeError("'center' must be a 2-tuple of numbers (passed %s)" % center)
 
         if plane == 'xy':
-            self.write('G17 ;XY plane')  # XY plane
+            self.write('G17 {}XY plane'.format(self.comment_char))  # XY plane
             dims = {
                 'x' : target[0],
                 'y' : target[1],
@@ -588,7 +592,7 @@ class G(object):
             if helix_len:
                 dims['z'] = helix_len
         elif plane == 'yz':
-            self.write('G19 ;YZ plane')  # YZ plane
+            self.write('G19 {}YZ plane'.format(self.comment_char))  # YZ plane
             dims = {
                 'y' : target[0],
                 'z' : target[1],
@@ -598,7 +602,7 @@ class G(object):
             if helix_len:
                 dims['x'] = helix_len
         elif plane == 'xz':
-            self.write('G18 ;XZ plane')  # XZ plane
+            self.write('G18 {}XZ plane'.format(self.comment_char))  # XZ plane
             dims = {
                 'x' : target[0],
                 'z' : target[1],
@@ -752,8 +756,8 @@ class G(object):
 
         actual_spacing = self._meander_spacing(minor, spacing)
         if abs(actual_spacing) != spacing:
-            msg = ';WARNING! meander spacing updated from {} to {}'
-            self.write(msg.format(spacing, actual_spacing))
+            msg = '{}WARNING! meander spacing updated from {} to {}'
+            self.write(msg.format(self.comment_char, spacing, actual_spacing))
         spacing = actual_spacing
         sign = 1
 
@@ -953,7 +957,7 @@ class G(object):
             raise Exception("Invalid plotting backend! Choose one of mayavi or matplotlib.")
 
     def write(self, statement_in, resp_needed=False):
-        if self.print_lines or (self.print_lines == 'auto' and self.outfile is None):
+        if self.print_lines is True or (self.print_lines == 'auto' and self.outfile is None):
             print(statement_in)
         self._write_out(statement_in)
         statement = encode2To3(statement_in + self.lineend)
