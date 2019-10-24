@@ -1,6 +1,6 @@
-import sys
-sys.path.append("..")
-from main import G
+#import sys
+#sys.path.append("..")
+from mecode import G
 g = G()
 g.set_pressure(3,30)
 g.set_pressure(6,30)
@@ -42,4 +42,4 @@ g.move(x=10)
 g.toggle_pressure(4)
 g.feed(20)
 g.move(z=5)
-g.view(backend='vpython')
+g.view(backend='vpython',nozzle_cam=True)

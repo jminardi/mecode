@@ -47,6 +47,7 @@ This software was developed by the Lewis Lab at Harvard University and Voxel8 In
 
 import math
 import os
+import sys
 import numpy as np
 from collections import defaultdict
 
@@ -1459,7 +1460,7 @@ class G(object):
 
         Examples
         --------
-        >>> #Write print ge
+        >>> #Write print geometry
         >>> geometry_def = g.meander()
 
         """
@@ -1474,6 +1475,100 @@ class G(object):
             keys = ['x','z','y']
             final_coords_dict.append([dict(zip(keys, l)) for l in i ])
         return final_coords_dict
+
+    def gen_geometry(self,outfile,filament_diameter=0.8,cut_point=None,preview=False,color_incl=None):
+        """ Creates an openscad file to create a CAD model from the print path.
+        
+        Parameters
+        ----------
+        outfile : str
+            Location to save the generated .scad file
+        filament_diameter : float (default: 0.8)
+            The com port to communicate over RS-232.
+        cut_point : int (default: None)
+            Stop generating cad model part way through the path
+        preview : bool (default: False)
+            Show matplotlib preview of the part to be generated.
+            Note that cut_point will affect the preview.
+        color_incl : str (default: None)
+            Used to export a single color when it is included in the code
+            design. Useful for exporting mutlimaterial parts as different
+            cad models.
+        Examples
+        --------
+        >>> #Write geometry to 'test.scad'
+        >>> g.gen_geometry('test.scad')
+
+        """
+        import solid as sld
+        from solid import utils as sldutils
+
+        # Matplotlib setup for preview
+        import matplotlib.cm as cm
+        from mpl_toolkits.mplot3d import Axes3D
+        import matplotlib.pyplot as plt
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+
+        def circle(radius,num_points=10):
+            circle_pts = []
+            for i in range(2 * num_points):
+                angle = math.radians(360 / (2 * num_points) * i)
+                circle_pts.append(sldutils.Point3(radius * math.cos(angle), radius * math.sin(angle), 0))
+            return circle_pts
+        
+        # SolidPython setup for geometry creation
+        extruded = 0
+        filament_cross = circle(radius=filament_diameter/2)
+
+        extruding_hist = dict(self.extruding_history)
+        position_hist = np.array(self.position_history)
+
+        #Stepping through all moves after initial position
+        extrusing_state = False
+        for index, (pos, color) in enumerate(zip(self.position_history[1:cut_point],self.color_history[1:cut_point]),1):
+            sys.stdout.write('\r')
+            sys.stdout.write("Exporting model: {:.0f}%".format(index/len(self.position_history[1:])*100))
+            sys.stdout.flush()
+            #print("{}/{}".format(index,len(self.position_history[1:])))
+            if index in extruding_hist:
+                extruding_state =  extruding_hist[index][1]
+
+            if extruding_state and ((color == color_incl) or (color_incl is None)):
+                X, Y, Z = position_hist[index-1:index+1, 0], position_hist[index-1:index+1, 1], position_hist[index-1:index+1, 2]
+                # Plot to matplotlb
+                if color_incl is not None:
+                    ax.plot(X, Y, Z,color_incl)
+                else:
+                    ax.plot(X, Y, Z,'b')
+                # Add geometry to part
+                extruded += sldutils.extrude_along_path(shape_pts=filament_cross, path_pts=[sldutils.Point3(*position_hist[index-1]),sldutils.Point3(*position_hist[index])])
+                extruded += sld.translate(position_hist[index-1])(sld.sphere(r=filament_diameter/2,segments=20))
+                extruded += sld.translate(position_hist[index])(sld.sphere(r=filament_diameter/2,segments=20))
+                
+        # Export geometry to file
+        file_out = os.path.join(os.curdir, '{}.scad'.format(outfile))
+        print("\nSCAD file written to: \n%(file_out)s" % vars())
+        sld.scad_render_to_file(extruded, file_out, include_orig_code=False)
+
+        if preview:
+            # Display Geometry for matplotlib
+            X, Y, Z = position_hist[:, 0], position_hist[:, 1], position_hist[:, 2]
+
+            # Hack to keep 3D plot's aspect ratio square. See SO answer:
+            # http://stackoverflow.com/questions/13685386
+            max_range = np.array([X.max()-X.min(),
+                                  Y.max()-Y.min(),
+                                  Z.max()-Z.min()]).max() / 2.0
+
+            mean_x = X.mean()
+            mean_y = Y.mean()
+            mean_z = Z.mean()
+            ax.set_xlim(mean_x - max_range, mean_x + max_range)
+            ax.set_ylim(mean_y - max_range, mean_y + max_range)
+            ax.set_zlim(mean_z - max_range, mean_z + max_range)
+            scaling = np.array([getattr(ax, 'get_{}lim'.format(dim))() for dim in 'xyz']); ax.auto_scale_xyz(*[[np.min(scaling), np.max(scaling)]]*3)
+            plt.show()
 
     # Public Interface  #######################################################
 
@@ -1490,7 +1585,7 @@ class G(object):
             'vpython' has been added to generate printing animations
             for debugging.
         outfile : str (default: 'None')
-            When using the 'matplotlib' or 'matplotlib2d' backend,
+            When using the 'matplotlib' backend,
             an image of the output will be save to the location specified
             here.
         color_on : bool (default: 'False')
@@ -1528,15 +1623,23 @@ class G(object):
         if backend == 'matplotlib':
             fig = plt.figure()
             ax = fig.gca(projection='3d')
-            ax.set_aspect('equal')
 
-            if color_on:
-                for index in [x+2 for x in range(len(history[1:-1])-3)]:
-                    X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]                
-                    ax.plot(X, Y, Z,color = cm.gray(self.color_history[index])[:-1],linewidth=1.5)
-            else:
-                X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
-                ax.plot(X, Y, Z)
+            extruding_hist = dict(self.extruding_history)
+            #Stepping through all moves after initial position
+            extrusing_state = False
+            for index, (pos, color) in enumerate(zip(history[1:],self.color_history[1:]),1):
+                if index in extruding_hist:
+                    extruding_state =  extruding_hist[index][1]
+
+                X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]
+
+                if extruding_state:
+                    if color_on:
+                        ax.plot(X, Y, Z,color = cm.gray(self.color_history[index])[:-1])
+                    else:
+                        ax.plot(X, Y, Z,'b')
+                else:
+                    ax.plot(X,Y,Z,'k--',linewidth=0.5)
 
             X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
 
@@ -1552,25 +1655,6 @@ class G(object):
             ax.set_xlim(mean_x - max_range, mean_x + max_range)
             ax.set_ylim(mean_y - max_range, mean_y + max_range)
             ax.set_zlim(mean_z - max_range, mean_z + max_range)
-
-            if outfile == None:
-                plt.show()
-            else:
-                plt.savefig(outfile,dpi=500)
-
-        elif backend == 'matplotlib2d': #Primarily for debugging mixing nozzle spirals
-            fig = plt.figure()
-            plt.margins(0.1)
-            ax = fig.gca()
-            ax.set_aspect('equal')
-            
-            if color:
-                for index in [x+2 for x in range(len(history[1:-1])-3)]:
-                    X, Y, Z = history[index-1:index+1, 0], history[index-1:index+1, 1], history[index-1:index+1, 2]
-                    ax.plot(X, Y, color = cm.hot(self.color_history[index])[:-1],linewidth=1.0)
-            else:
-                X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
-                ax.plot(X, Y,linewidth=0.5)
 
             if outfile == None:
                 plt.show()

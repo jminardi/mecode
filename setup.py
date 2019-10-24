@@ -22,7 +22,9 @@ setup(
         '': ['*.txt', '*.md'],
     },
     install_requires=[
-        'pyserial',
         'numpy',
+        'matplotlib',
+        'solidpython',
+        'vpython',
     ],
 )
