@@ -1660,6 +1660,9 @@ class G(object):
             ax.set_xlim(mean_x - max_range, mean_x + max_range)
             ax.set_ylim(mean_y - max_range, mean_y + max_range)
             ax.set_zlim(mean_z - max_range, mean_z + max_range)
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y")
+            ax.set_zlabel("Z")
 
             if outfile == None:
                 plt.show()
