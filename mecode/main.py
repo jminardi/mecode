@@ -480,6 +480,11 @@ class G(object):
         values = [v for v in dims.values()]
         if self.is_relative:
             dist = math.sqrt(values[0] ** 2 + values[1] ** 2)
+            if radius == 'auto':
+                radius = dist / 2.0
+            elif abs(radius) < dist / 2.0:
+                msg = 'Radius {} to small for distance {}'.format(radius, dist)
+                raise RuntimeError(msg)
             vect_dir= [values[0]/dist,values[1]/dist]
             if direction == 'CW':
                 arc_rotation_matrix = np.matrix([[0, -1],[1, 0]])
@@ -499,6 +504,11 @@ class G(object):
             dist = math.sqrt(
                 (cp[k[0]] - values[0]) ** 2 + (cp[k[1]] - values[1]) ** 2
             )
+            if radius == 'auto':
+                radius = dist / 2.0
+            elif abs(radius) < dist / 2.0:
+                msg = 'Radius {} to small for distance {}'.format(radius, dist)
+                raise RuntimeError(msg)
             vect_dir= [(values[0]-cp[k[0]])/dist,(values[1]-cp[k[1]])/dist]
             if direction == 'CW':
                 arc_rotation_matrix = np.matrix([[0, -1],[1, 0]])
@@ -512,11 +522,6 @@ class G(object):
             center_coords = np.array(cp[k[:2]])+c_vect
             final_pos = np.array(cp[k[:2]])+a_vect*2-c_vect
             initial_pos = np.array(cp[k[:2]])
-        if radius == 'auto':
-            radius = dist / 2.0
-        elif abs(radius) < dist / 2.0:
-            msg = 'Radius {} to small for distance {}'.format(radius, dist)
-            raise RuntimeError(msg)
 
         #extrude feature implementation
         # only designed for flow calculations in x-y plane
