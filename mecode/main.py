@@ -1459,28 +1459,6 @@ class G(object):
                 letter >>= 1
         return data +'{:02X}'.format(CRC8)
 
-    def exportToAPE(self):
-        """ Exports a list of dictionaries describing extrusion moves in a 
-        format compatible with APE.
-
-        Examples
-        --------
-        >>> #Write print geometry
-        >>> geometry_def = g.meander()
-
-        """
-        extruding_hist = dict(self.extruding_history)
-        position_hist = self.position_history
-        cut_ranges=[*extruding_hist][1:]
-        final_coords = []
-        for i in range(0,len(cut_ranges),2):
-            final_coords.append(position_hist[cut_ranges[i]-1:cut_ranges[i+1]])
-        final_coords_dict = []
-        for i in final_coords:
-            keys = ['x','z','y']
-            final_coords_dict.append([dict(zip(keys, l)) for l in i ])
-        return final_coords_dict
-
     def gen_geometry(self,outfile,filament_diameter=0.8,cut_point=None,preview=False,color_incl=None):
         """ Creates an openscad file to create a CAD model from the print path.
         
@@ -1530,7 +1508,7 @@ class G(object):
         position_hist = np.array(self.position_history)
 
         #Stepping through all moves after initial position
-        extrusing_state = False
+        extruding_state = False
         for index, (pos, color) in enumerate(zip(self.position_history[1:cut_point],self.color_history[1:cut_point]),1):
             sys.stdout.write('\r')
             sys.stdout.write("Exporting model: {:.0f}%".format(index/len(self.position_history[1:])*100))
@@ -1575,9 +1553,217 @@ class G(object):
             scaling = np.array([getattr(ax, 'get_{}lim'.format(dim))() for dim in 'xyz']); ax.auto_scale_xyz(*[[np.min(scaling), np.max(scaling)]]*3)
             plt.show()
 
+    # ROS3DA Functions  #######################################################
+
+
+    def line_frequency(self,freq,padding,length,com_port,pressure,travel_feed):
+        """ Prints a line with varying on/off frequency.
+
+        Parameters
+        ----------
+        frequency : float
+            The length to move in x in one half cycle
+        """
+
+        # Switch to relative if in absolute, but keep track of state
+        was_absolute = True
+        if not self.is_relative:
+            self.relative()
+        else:
+            was_absolute = False
+
+        # Use velocity on, required for switching like this
+        self.write("VELOCITY ON")
+
+        print_height = np.copy(self._current_position['z'])
+        print_feed = np.copy(self.speed)
+
+        self.set_pressure(com_port,pressure)
+        for f in freq:
+            # freq is in hz, ie 1/s. Thus dist = (m/s)/(1/s) = m
+            dist = print_feed/f
+            switch_points = np.arange(length+dist,step=dist)
+            if len(switch_points)%2:
+                switch_points = switch_points[:-1]
+            for point in switch_points:
+                self.toggle_pressure(com_port)
+                self.move(x=dist)
+                
+            #Move to push into substrate
+            self.move(z=-print_height)
+            self.feed(travel_feed)
+            self.move(z=print_height+5)
+
+            if f != freq[-1]:
+                self.move(x=-len(switch_points)*dist,y=padding)
+                self.move(z=-5)
+                self.feed(print_feed)
+
+        # Switch back to velocity off
+        self.write("VELOCITY OFF")
+        # Switch back to absolute if it was in absolute
+        if was_absolute:
+            self.absolute()
+
+        return [length,padding*(len(freq)-1)]
+
+    def line_width(self,padding,width,com_port,pressures,spacing,travel_feed):
+        """ Prints meanders of varying spacing with different pressures.
+
+        Parameters
+        ----------
+        frequency : float
+            The length to move in x in one half cycle
+        """
+        # Switch to relative if in absolute, but keep track of state
+        was_absolute = True
+        if not self.is_relative:
+            self.relative()
+        else:
+            was_absolute = False
+
+        print_height = np.copy(self._current_position['z'])
+        print_feed = np.copy(self.speed)
+        
+        for pressure in pressures:
+            direction = 1
+            self.set_pressure(com_port,pressure)
+            self.toggle_pressure(com_port)
+            for space in spacing:
+                #self.toggle_pressure(com_port)
+                self.move(y=direction*width)
+                self.move(space)
+                if space == spacing[-1]:
+                    self.move(y=-direction*width)
+                #self.toggle_pressure(com_port)
+                direction *= -1
+            self.toggle_pressure(com_port)
+            self.feed(travel_feed)
+            self.move(z=5)
+            if pressure != pressures[-1]:
+                self.move(x=-np.sum(spacing),y=width+padding)
+                self.move(z=-5)
+                self.feed(print_feed)
+
+        # Switch back to absolute if it was in absolute
+        if was_absolute:
+            self.absolute()
+
+        return [np.sum(spacing)*2-spacing[-1],len(pressures)*width + (len(pressures)-1)*padding]
+
+    def line_span(self,padding,dwell,distances,com_port,pressure,travel_feed):
+        """ Prints meanders of varying spacing with different pressures.
+
+        Parameters
+        ----------
+        frequency : float
+            The length to move in x in one half cycle
+        """
+        # Switch to relative if in absolute, but keep track of state
+        was_absolute = True
+        if not self.is_relative:
+            self.relative()
+        else:
+            was_absolute = False
+
+        print_height = np.copy(self._current_position['z'])
+        print_feed = np.copy(self.speed)
+
+        for dist in distances:
+            self.toggle_pressure(com_port)
+            self.dwell(dwell)
+            self.feed(print_feed*dist/distances[0])
+            self.move(y=dist)
+            self.dwell(dwell)
+            self.toggle_pressure(com_port)
+
+            self.move(z=-print_height)
+            self.feed(travel_feed)
+            self.move(z=print_height+5)
+            if dist != distances[-1]:
+                self.move(x=padding,y=-dist)
+                self.move(z=-5)
+                self.feed(print_feed)
+
+        # Switch back to absolute if it was in absolute
+        if was_absolute:
+            self.absolute()
+
+        return [padding*(len(distances)-1),np.max(distances)]
+
+
+    def line_crossing(self,dwell,feeds,length,com_port,pressure,travel_feed):
+        """ Prints meanders of varying spacing with different pressures.
+
+        Parameters
+        ----------
+        frequency : float
+            The length to move in x in one half cycle
+        """
+        # Switch to relative if in absolute, but keep track of state
+        was_absolute = True
+        if not self.is_relative:
+            self.relative()
+        else:
+            was_absolute = False
+
+        print_height = np.copy(self._current_position['z'])
+
+        self.set_pressure(com_port,pressure)
+        self.toggle_pressure(com_port)
+        self.dwell(dwell)
+        self.move(x=length)
+        self.dwell(dwell)
+        self.toggle_pressure(com_port)
+        self.move(z=-print_height)
+        self.feed(travel_feed)
+        self.move(z=print_height+5)
+
+        spacing = length/(len(feeds)+1)
+        self.move(x=-spacing,y=8)
+        for feed in feeds:
+            self.move(z=-(print_height+5))
+            self.feed(feed)
+            self.move(y=-16)
+            if feed != feeds[-1]:
+                self.feed(travel_feed)
+                self.move(z=print_height+5)
+                self.move(x=-spacing,y=16)
+
+        self.feed(travel_feed)
+        self.move(z=print_height+5)
+
+        # Switch back to absolute if it was in absolute
+        if was_absolute:
+            self.absolute()
+
+        return length
+
+    def export_APE(self):
+        """ Exports a list of dictionaries describing extrusion moves in a
+        format compatible with APE.
+
+        Examples
+        --------
+        >>> #Write print geometry
+        >>> geometry_def = g.meander()
+
+        """
+        extruding_hist = dict(self.extruding_history)
+        position_hist = self.position_history
+        cut_ranges=[*extruding_hist][1:]
+        final_coords = []
+        for i in range(0,len(cut_ranges),2):
+            final_coords.append(position_hist[cut_ranges[i]-1:cut_ranges[i+1]])
+        final_coords_dict = []
+        for i in final_coords:
+            keys = ['x','z','y']
+            final_coords_dict.append([dict(zip(keys, l)) for l in i ])
+        return final_coords_dict
+
     # Public Interface  #######################################################
 
-    def view(self, backend='matplotlib', outfile=None, color_on=False, nozzle_cam=False, 
+    def view(self, backend='matplotlib', outfile=None, hide_travel=False,color_on=False, nozzle_cam=False,
              fast_forward = 3, framerate = 60, nozzle_dims=[1.0,20.0], 
              substrate_dims=[0.0,0.0,-1.0,300,1,300], scene_dims = [720,720]):
         """ View the generated Gcode.
@@ -1631,7 +1817,7 @@ class G(object):
 
             extruding_hist = dict(self.extruding_history)
             #Stepping through all moves after initial position
-            extrusing_state = False
+            extruding_state = False
             for index, (pos, color) in enumerate(zip(history[1:],self.color_history[1:]),1):
                 if index in extruding_hist:
                     extruding_state =  extruding_hist[index][1]
@@ -1644,7 +1830,8 @@ class G(object):
                     else:
                         ax.plot(X, Y, Z,'b')
                 else:
-                    ax.plot(X,Y,Z,'k--',linewidth=0.5)
+                    if not hide_travel:
+                        ax.plot(X,Y,Z,'k--',linewidth=0.5)
 
             X, Y, Z = history[:, 0], history[:, 1], history[:, 2]
 
@@ -1825,7 +2012,7 @@ class G(object):
 
             def run():
                 #Stepping through all moves after initial position
-                extrusing_state = False
+                extruding_state = False
                 for count, (pos, color) in enumerate(zip(position_hist[1:],self.color_history[1:]),1):
                     X, Y, Z = pos
                     if count in speed_hist:
