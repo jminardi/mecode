@@ -1869,7 +1869,7 @@ class G(object):
             final_coords.append(position_hist[cut_ranges[i]-1:cut_ranges[i+1]])
         final_coords_dict = []
         for i in final_coords:
-            keys = ['x','z','y']
+            keys = ['X','Y','Z']
             final_coords_dict.append([dict(zip(keys, l)) for l in i ])
         return final_coords_dict
 
