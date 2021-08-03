@@ -1448,7 +1448,7 @@ class G(object):
 
     def calc_CRC8(self,data):
         CRC8 = 0
-        for letter in list(bytearray(data)):
+        for letter in list(bytearray(data, encoding='utf-8')):
             for i in range(8):
                 if (letter^CRC8)&0x01:
                     CRC8 ^= 0x18
