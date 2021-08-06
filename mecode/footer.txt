@@ -180,24 +180,24 @@ DFS omniOn
         COMMINIT $hFile, "baud=19200 parity=N data=8 stop=1"
         COMMSETTIMEOUT $hFile, -1, -1, 1000
                 
-        FILEWRITE $hFile "CONN18"
+        FILEWRITENOTERM $hFile "CONN18\x0D"
         FILEREAD $hFile, 0, $strtask2
         WHILE STRCMP($strtask2,"READY0A",0)
-                FILEWRITE $hFile "CONN18"
+                FILEWRITENOTERM $hFile "CONN18\x0D"
                 FILEREAD $hFile, 0, $strtask2
         ENDWHILE
         
-        FILEWRITE $hFile "OPN40"
+        FILEWRITENOTERM $hFile "OPN40\x0D"
         FILEREAD $hFile, 0, $strtask2
         WHILE STRCMP($strtask2,"ReceivedBF",0)
-                FILEWRITE $hFile "OPN40"
+                FILEWRITENOTERM $hFile "OPN40\x0D"
                 FILEREAD $hFile, 0, $strtask2
         ENDWHILE
         
-        FILEWRITE $hFile "DCONE1"
+        FILEWRITENOTERM $hFile "DCONE1\x0D"
         FILEREAD $hFile, 0, $strtask2
         WHILE STRCMP($strtask2,"CLOSED42",0)
-                FILEWRITE $hFile "DCONE1"
+                FILEWRITENOTERM $hFile "DCONE1\x0D"
                 FILEREAD $hFile, 0, $strtask2
         ENDWHILE
         FILECLOSE $hFile
@@ -212,24 +212,24 @@ DFS omniOff
         COMMINIT $hFile, "baud=19200 parity=N data=8 stop=1"
         COMMSETTIMEOUT $hFile, -1, -1, 1000
                 
-        FILEWRITE $hFile "CONN18"
+        FILEWRITENOTERM $hFile "CONN18\x0D"
         FILEREAD $hFile, 0, $strtask2
         WHILE STRCMP($strtask2,"READY0A",0)
-                FILEWRITE $hFile "CONN18"
+                FILEWRITENOTERM $hFile "CONN18\x0D"
                 FILEREAD $hFile, 0, $strtask2
         ENDWHILE
         
-        FILEWRITE $hFile "CLS3A"
+        FILEWRITENOTERM $hFile "CLS3A\x0D"
         FILEREAD $hFile, 0, $strtask2
         WHILE STRCMP($strtask2,"ReceivedBF",0)
-                FILEWRITE $hFile "CLS3A"
+                FILEWRITENOTERM $hFile "CLS3A\x0D"
                 FILEREAD $hFile, 0, $strtask2
         ENDWHILE
         
-        FILEWRITE $hFile "DCONE1"
+        FILEWRITENOTERM $hFile "DCONE1\x0D"
         FILEREAD $hFile, 0, $strtask2
         WHILE STRCMP($strtask2,"CLOSED42",0)
-                FILEWRITE $hFile "DCONE1"
+                FILEWRITENOTERM $hFile "DCONE1\x0D"
                 FILEREAD $hFile, 0, $strtask2
         ENDWHILE
         FILECLOSE $hFile
@@ -244,24 +244,25 @@ DFS omniSetInt
         COMMINIT $hFile, "baud=19200 parity=N data=8 stop=1"
         COMMSETTIMEOUT $hFile, -1, -1, 1000
 
-        FILEWRITE $hFile "CONN18"
+        FILEWRITENOTERM $hFile "CONN18\x0D"
         FILEREAD $hFile, 0, $strtask2
         WHILE STRCMP($strtask2,"READY0A",0)
-                FILEWRITE $hFile "CONN18"
+                FILEWRITENOTERM $hFile "CONN18\x0D"
                 FILEREAD $hFile, 0, $strtask2
         ENDWHILE
 
-        FILEWRITE $hFile $strtask4
+        $strtask4 = $strtask4 + "\x0D"
+        FILEWRITENOTERM $hFile $strtask4
         FILEREAD $hFile, 0, $strtask2
         WHILE STRCMP($strtask2,"ReceivedBF",0)
-                FILEWRITE $hFile $strtask4
+                FILEWRITENOTERM $hFile $strtask4
                 FILEREAD $hFile, 0, $strtask2
         ENDWHILE
 
-        FILEWRITE $hFile "DCONE1"
+        FILEWRITENOTERM $hFile "DCONE1\x0D"
         FILEREAD $hFile, 0, $strtask2
         WHILE STRCMP($strtask2,"CLOSED42",0)
-                FILEWRITE $hFile "DCONE1"
+                FILEWRITENOTERM $hFile "DCONE1\x0D"
                 FILEREAD $hFile, 0, $strtask2
         ENDWHILE
         FILECLOSE $hFile
