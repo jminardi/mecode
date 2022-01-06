@@ -597,7 +597,7 @@ class G(object):
             dims['E'] = filament_length + current_extruder_position
 
         if axis is not None:
-            self.write('G16 X Y {} {}'.format(axis, self._commentify(coordinate axis assignment)))  # coordinate axis assignment
+            self.write('G16 X Y {} {}'.format(axis, self._commentify("coordinate axis assignment")))  # coordinate axis assignment
         self.write(plane_selector)
         args = self._format_args(**dims)
         if helix_dim is None:
