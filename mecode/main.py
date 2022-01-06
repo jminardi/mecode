@@ -110,7 +110,8 @@ class G(object):
                  extrusion_multiplier=1,
                  setup=True,
                  lineend='os',
-                 comment_char=';'):
+                 comment_char=';',
+                 absolute=False):
         """
         Parameters
         ----------
@@ -179,6 +180,8 @@ class G(object):
             lineending insertion.
         comment_char : str (default: ';')
             Character to use when outputting comments.
+        absolute : bool (default: False)
+            Should the system default to relative or absolute mode
 
         """
         self.outfile = outfile
@@ -199,7 +202,7 @@ class G(object):
         self.i_axis = i_axis
         self.j_axis = j_axis
         self.k_axis = k_axis
-        self.comment_char = comment_char
+        self._comment_char = comment_char
 
         self._current_position = defaultdict(float)
         self.is_relative = True
@@ -237,6 +240,10 @@ class G(object):
         if setup:
             self.setup()
 
+        if absolute:
+            self.absolute()
+
+
     @property
     def current_position(self):
         return self._current_position
@@ -259,6 +266,54 @@ class G(object):
         """
         self.teardown()
 
+    def _commentify(self, txt):
+        '''
+        Format text `txt` in whichever manner is needed to indicate it's a comment.
+        The mode is set by the `comment_char` parameter on class construction
+        '''
+
+        # We need to special case using parenthesis for comments, since we have to 
+        # wrap them around the beginning and the end of the comment
+        if self._comment_char == "(":
+            return "( {} )".format(txt)
+
+        # Otherwise, just prepend the comment character (and a space)
+        return "{} {}".format(self._comment_char, txt)
+
+
+    def write_comment(self, comment):
+        """ Insert a comment into the gcode output file
+        """
+        self.write(self._commentify(comment))
+
+    def move_other_axis(self, a, rapid=False):
+        """ Move an auxilliary axis (currently "A")
+
+        Primarily, this is useful for a rotational indexer (if present)
+        """
+
+        cmd = 'G0 ' if rapid else 'G1 '
+        self.write(cmd + "A{:.{digits}f}".format(a, digits=self.output_digits))
+
+    def insert_machine_stop(self, comment=None):
+        '''Insert a machine stop (M00) command with an optional comment
+        '''
+        if comment:
+            self.write("M00 {}".format(self._commentify(comment)))
+        else:
+            self.write("M00")
+
+    def insert_optional_stop(self, comment=None):
+        '''Insert a optional stop (M01) command with an optional comment
+        '''
+        if comment:
+            self.write("M01 {}".format(self._commentify(comment)))
+        else:
+            self.write("M01")
+
+
+
+
     # GCode Aliases  ########################################################
 
     def set_home(self, x=None, y=None, z=None, **kwargs):
@@ -272,7 +327,7 @@ class G(object):
         """
         args = self._format_args(x, y, z, **kwargs)
         space = ' ' if len(args) > 0 else ''
-        self.write('G92' + space + args + ' {}set home'.format(self.comment_char))
+        self.write('G92' + space + args + " " +self._commentify('set home'))
 
         self._update_current_position(mode='absolute', x=x, y=y, z=z, **kwargs)
 
@@ -282,7 +337,7 @@ class G(object):
         # FIXME This does not work with internal current_position
         # FIXME You must call an abs_move after this to re-sync
         # current_position
-        self.write('G92.1 {}reset position to machine coordinates without moving'.format(self.comment_char))
+        self.write('G92.1 {}'.format(self._commentify("reset position to machine coordinates without moving")))
 
     def relative(self):
         """ Enter relative movement mode, in general this method should not be
@@ -290,7 +345,7 @@ class G(object):
 
         """
         if not self.is_relative:
-            self.write('G91 {}relative'.format(self.comment_char))
+            self.write('G91 {}'.format(self._commentify("relative")))
             self.is_relative = True
 
     def absolute(self):
@@ -299,7 +354,7 @@ class G(object):
 
         """
         if self.is_relative:
-            self.write('G90 {}absolute'.format(self.comment_char))
+            self.write('G90 {}'.format(self._commentify("absolute")))
             self.is_relative = False
 
     def feed(self, rate):
@@ -334,9 +389,9 @@ class G(object):
         """
         self._write_header()
         if self.is_relative:
-            self.write('G91 {}relative'.format(self.comment_char))
+            self.write('G91 {}'.format(self._commentify("relative")))
         else:
-            self.write('G90 {}absolute'.format(self.comment_char))
+            self.write('G90 {}'.format(self._commentify("absolute")))
 
     def teardown(self, wait=True):
         """ Close the outfile file after writing the footer if opened. This
@@ -482,14 +537,14 @@ class G(object):
             raise RuntimeError(msg)
         dimensions = [k.lower() for k in dims.keys()]
         if 'x' in dimensions and 'y' in dimensions:
-            plane_selector = 'G17 {}XY plane'.format(self.comment_char)  # XY plane
+            plane_selector = 'G17 {}'.format(self._commentify('XY plane'))  # XY plane
             axis = helix_dim
         elif 'x' in dimensions:
-            plane_selector = 'G18 {}XZ plane'.format(self.comment_char)  # XZ plane
+            plane_selector = 'G18 {}'.format(self._commentify('XZ plane'))  # XZ plane
             dimensions.remove('x')
             axis = dimensions[0].upper()
         elif 'y' in dimensions:
-            plane_selector = 'G19 {}YZ plane'.format(self.comment_char)  # YZ plane
+            plane_selector = 'G19 {}'.format(self._commentify('YZ plane'))  # YZ plane
             dimensions.remove('y')
             axis = dimensions[0].upper()
         else:
@@ -539,7 +594,7 @@ class G(object):
             dims['E'] = filament_length + current_extruder_position
 
         if axis is not None:
-            self.write('G16 X Y {} {}coordinate axis assignment'.format(axis, self.comment_char))  # coordinate axis assignment
+            self.write('G16 X Y {} {}'.format(axis, self._commentify(coordinate axis assignment)))  # coordinate axis assignment
         self.write(plane_selector)
         args = self._format_args(**dims)
         if helix_dim is None:
@@ -582,7 +637,7 @@ class G(object):
             raise RuntimeError("'center' must be a 2-tuple of numbers (passed %s)" % center)
 
         if plane == 'xy':
-            self.write('G17 {}XY plane'.format(self.comment_char))  # XY plane
+            self.write('G17 {}'.format(self._commentify('XY plane')))  # XY plane
             dims = {
                 'x' : target[0],
                 'y' : target[1],
@@ -592,7 +647,7 @@ class G(object):
             if helix_len:
                 dims['z'] = helix_len
         elif plane == 'yz':
-            self.write('G19 {}YZ plane'.format(self.comment_char))  # YZ plane
+            self.write('G19 {}'.format(self._commentify('YZ plane')))  # YZ plane
             dims = {
                 'y' : target[0],
                 'z' : target[1],
@@ -602,7 +657,7 @@ class G(object):
             if helix_len:
                 dims['x'] = helix_len
         elif plane == 'xz':
-            self.write('G18 {}XZ plane'.format(self.comment_char))  # XZ plane
+            self.write('G18 {}'.format(self._commentify('XZ plane')))  # XZ plane
             dims = {
                 'x' : target[0],
                 'z' : target[1],
@@ -756,8 +811,7 @@ class G(object):
 
         actual_spacing = self._meander_spacing(minor, spacing)
         if abs(actual_spacing) != spacing:
-            msg = '{}WARNING! meander spacing updated from {} to {}'
-            self.write(msg.format(self.comment_char, spacing, actual_spacing))
+            self.write(self._commentify("WARNING! meander spacing updated from {} to {}".format(spacing, actual_spacing)))
         spacing = actual_spacing
         sign = 1
 
