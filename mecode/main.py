@@ -180,6 +180,9 @@ class G(object):
             lineending insertion.
         comment_char : str (default: ';')
             Character to use when outputting comments.
+            Special case handling for parenthesis comments. If "(" is specified
+            as the comment symbol, the comments will be wrapped in both opening
+            and closing parenthesis: `G1 X5 ( this is a comment )`
         absolute : bool (default: False)
             Should the system default to relative or absolute mode
 
