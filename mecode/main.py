@@ -372,7 +372,7 @@ class G(object):
         self.write('G1 F{}'.format(rate))
         self.speed = rate
 
-    def dwell(self, time):
+    def dwell(self, time, comment=None):
         """ Pause code executions for the given amount of time.
 
         Parameters
@@ -381,7 +381,11 @@ class G(object):
             Time in milliseconds to pause code execution.
 
         """
-        self.write('G4 P{}'.format(time))
+
+        if comment:
+            self.write('G4 P{} {}'.format(time, self._commentify(comment)))
+        else:
+            self.write('G4 P{}'.format(time))
 
     # Composed Functions  #####################################################
 
