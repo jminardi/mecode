@@ -90,12 +90,12 @@ class TestGMatrix(TestGFixture):
         self.assert_almost_position({'x': 1.0, 'y': 0, 'z': 2})        
 
         self.expect_cmd("""
-        G90 ;absolute 
+        G90 ; absolute 
         G1 X-1.000000 Y0.000000 Z0.000000
-        G91 ;relative
-        G90 ;absolute 
+        G91 ; relative
+        G90 ; absolute 
         G1 X-1.000000 Y0.000000 Z2.000000
-        G91 ;relative
+        G91 ; relative
         """)
         self.assert_output()
 
@@ -106,12 +106,12 @@ class TestGMatrix(TestGFixture):
         self.g.abs_move(z=2)
         self.assert_almost_position({'x': 1.0, 'y': 0, 'z': 2})        
         self.expect_cmd("""
-        G90 ;absolute  
+        G90 ; absolute  
         G1 X0.000000 Y1.000000 Z0.000000
-        G91 ;relative
-        G90 ;absolute 
+        G91 ; relative
+        G90 ; absolute 
         G1 X0.000000 Y1.000000 Z2.000000
-        G91 ;relative
+        G91 ; relative
         """)
         self.assert_output()
 
@@ -128,7 +128,7 @@ class TestGMatrix(TestGFixture):
         self.g.rotate(math.pi/2)
         self.g.arc(x=10, y=0)
         self.expect_cmd("""
-        G17 ;XY plane
+        G17 ; XY plane
         G2 X0.000000 Y10.000000 R5.000000
         """)
         self.assert_output()        
@@ -139,7 +139,7 @@ class TestGMatrix(TestGFixture):
         self.g.arc(x=10,y=0)
         # Without the reflect this would be a G2.
         self.expect_cmd("""
-        G17 ;XY plane
+        G17 ; XY plane
         G3 X10.000000 Y0.000000 R5.000000
         """)
         self.assert_output()
