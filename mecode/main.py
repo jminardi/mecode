@@ -1064,11 +1064,11 @@ class G(object):
         if mode == 'auto':
             mode = 'relative' if self.is_relative else 'absolute'
 
-        if self.x_axis is not 'X' and x is not None:
+        if self.x_axis != 'X' and x is not None:
             kwargs[self.x_axis] = x
-        if self.y_axis is not 'Y' and y is not None:
+        if self.y_axis != 'Y' and y is not None:
             kwargs[self.y_axis] = y
-        if self.z_axis is not 'Z' and z is not None:
+        if self.z_axis != 'Z' and z is not None:
             kwargs[self.z_axis] = z
 
         if mode == 'relative':
