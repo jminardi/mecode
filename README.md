@@ -104,16 +104,16 @@ rename it.
 Installation
 ------------
 
-The easiest method to install mecode is with pip:
+*Outdated* The easiest method to install mecode is with pip:
 
 ```bash
-sudo pip install mecode
+pip install git+https://github.com/rtellez700/mecode.git
 ```
 
 To install from source:
 
 ```bash
-$ git clone https://github.com/jminardi/mecode.git
+$ git clone https://github.com/rtellez700/mecode.git
 $ cd mecode
 $ pip install -r requirements.txt
 $ python setup.py install
@@ -122,15 +122,14 @@ $ python setup.py install
 Optional Dependencies
 ---------------------
 The following dependencies are optional, and are only needed for
-visualization. An easy way to install them is to use
-[Canopy][0] or [conda][1].
+visualization. An easy way to install them is to use [conda][1].
 
 * numpy
-* mayavi
 * matplotlib
+* vpython
+* mayavi
 
-[0]: https://www.enthought.com/products/canopy/
-[1]: https://store.continuum.io/cshop/anaconda/
+[1]: https://www.anaconda.com/
 
 TODO
 ----
