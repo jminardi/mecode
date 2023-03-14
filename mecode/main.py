@@ -1813,7 +1813,7 @@ class G(object):
 
         if backend == 'matplotlib':
             fig = plt.figure()
-            ax = fig.gca(projection='3d')
+            ax = fig.add_subplot(projection='3d')
 
             extruding_hist = dict(self.extruding_history)
             #Stepping through all moves after initial position
