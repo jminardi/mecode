@@ -1,5 +1,5 @@
 import unittest
-from mock import Mock
+from mock import Mock, patch, MagicMock
 import os
 from time import sleep
 from threading import Thread
@@ -48,10 +48,19 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 class TestPrinter(unittest.TestCase):
+    # printer: Printer
+    # serial_port_patcher: unittest.mock._patch
+    # serial_port_mock: MagicMock
 
     def setUp(self):
+        # self.serial_port_mock = Mock(spec=serial.Serial, name='MockSerial')
+        # self.serial_port_patcher = patch('mecode.printer.serial.Serial')
+        # serial_port_constructor = self.serial_port_patcher.start()
+        # serial_port_constructor.return_value = self.serial_port_mock
+        # self.printer = Printer()
+
         self.p = Printer()
-        self.p.s = Mock(spec=serial.Serial(), name='MockSerial')
+        self.p.s = Mock(spec=serial.Serial, name='MockSerial')
         self.p.s.readline.return_value = encode2To3('ok\n')
         self.p.s.timeout = 1
         self.p.s.writeTimeout = 1
