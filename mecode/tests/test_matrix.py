@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 import unittest
 import sys
 import math
@@ -10,7 +10,7 @@ HERE = dirname(abspath(__file__))
 try:
     from mecode import GMatrix
 except:
-    sys.path.append(abspath(os.path.join(HERE, '..', '..')))
+    sys.path.append(abspath(join(HERE, '..', '..')))
     from mecode import GMatrix
 
 from test_main import TestGFixture
