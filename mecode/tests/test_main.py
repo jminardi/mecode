@@ -636,7 +636,7 @@ class TestG(TestGFixture):
         self.assert_output()
 
         self.g.rename_axis(x='X')
-        self.g.arc(x=10, z=10)
+        self.g.arc(x=10, z=10, linearize=False)
         self.assert_position({'x': 40.0, 'y': 30.0, 'z': 40, 'A': 10, 'B': 30,
                               'W': 10})
         self.expect_cmd("""

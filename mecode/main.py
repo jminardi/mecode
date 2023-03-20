@@ -969,7 +969,7 @@ class G(object):
         if was_absolute:
             self.absolute()
 
-    def clip(self, axis='z', direction='+x', height=4):
+    def clip(self, axis='z', direction='+x', height=4, linearize=False):
         """ Move the given axis up to the given height while arcing in the
         given direction.
 
@@ -1002,6 +1002,7 @@ class G(object):
             axis: height,
             'direction': orientation,
             'radius': radius,
+            'linearize': linearize
         }
         self.arc(**kwargs)
 
