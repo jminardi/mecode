@@ -1,3 +1,5 @@
+.delete
+
 *.py[cod]
 .DS_Store
 .ropeproject

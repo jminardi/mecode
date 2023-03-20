@@ -333,7 +333,7 @@ class G(object):
         """
         self.abs_move(x=0, y=0)
 
-    def move(self, x=None, y=None, z=None, rapid=False, color=0, **kwargs):
+    def move(self, x=None, y=None, z=None, rapid=False, color=(0,0,0,0.5), **kwargs):
         """ Move the tool head to the given position. This method operates in
         relative mode unless a manual call to `absolute` was given previously.
         If an absolute movement is desired, the `abs_move` method is
@@ -343,7 +343,7 @@ class G(object):
             Must specify endpoint as kwargs, e.g. x=5, y=5
         rapid : Bool (default: False)
             Executes an uncoordinated move to the specified location.
-        color : float or string
+        color : hex string or rgb(a) string
             Specifies a color to be added to color history for viewing.
 
         Examples
@@ -775,7 +775,7 @@ class G(object):
                 self.arc(x=radius,y=radius,direction='CCW',radius=radius, linearize=linearize)
 
     def meander(self, x, y, spacing, start='LL', orientation='x', tail=False,
-                minor_feed=None, color=0):
+                minor_feed=None, color=(0,0,0,0.5)):
         """ Infill a rectangle with a square wave meandering pattern. If the
         relevant dimension is not a multiple of the spacing, the spacing will
         be tweaked to ensure the dimensions work out.
@@ -796,6 +796,8 @@ class G(object):
             Whether or not to terminate the meander in the minor axis
         minor_feed : float or None (default: None)
             Feed rate to use in the minor axis
+        color : hex string or rgb(a) string
+            Specifies a color to be added to color history for viewing.
 
         Examples
         --------
@@ -1763,7 +1765,7 @@ class G(object):
 
     # Public Interface  #######################################################
 
-    def view(self, backend='matplotlib', outfile=None, hide_travel=False,color_on=False, nozzle_cam=False,
+    def view(self, backend='matplotlib', outfile=None, hide_travel=False,color_on=True, nozzle_cam=False,
              fast_forward = 3, framerate = 60, nozzle_dims=[1.0,20.0], 
              substrate_dims=[0.0,0.0,-1.0,300,1,300], scene_dims = [720,720]):
         """ View the generated Gcode.
@@ -1826,7 +1828,9 @@ class G(object):
 
                 if extruding_state:
                     if color_on:
-                        ax.plot(X, Y, Z,color = cm.gray(self.color_history[index])[:-1])
+                        # ax.plot(X, Y, Z,color = cm.gray(self.color_history[index])[:-1])
+                        print(self.color_history[index])
+                        ax.plot(X, Y, Z,color = self.color_history[index])
                     else:
                         ax.plot(X, Y, Z,'b')
                 else:
