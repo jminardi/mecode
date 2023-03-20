@@ -126,7 +126,7 @@ class TestGMatrix(TestGFixture):
 
     def test_arc(self):
         self.g.rotate(math.pi/2)
-        self.g.arc(x=10, y=0)
+        self.g.arc(x=10, y=0, linearize=False)
         self.expect_cmd("""
         G17
         G2 X0.000000 Y10.000000 R5.000000
