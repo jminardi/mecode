@@ -1,7 +1,7 @@
 Mecode
 ======
-
-[![Build Status](https://travis-ci.org/jminardi/mecode.svg?branch=master)](https://travis-ci.org/jminardi/mecode)
+  `
+[![Unit Tests](https://github.com/rtellez700/mecode/actions/workflows/python-package.yml/badge.svg)](https://github.com/rtellez700/mecode/actions/workflows/python-package.yml)
 
 ### GCode for all
 
