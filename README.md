@@ -140,6 +140,6 @@ TODO
 
 Credits
 -------
-This software was developed by the [Lewis Lab][2] at Harvard University.
+This software was developed by the [Lewis Lab][2] at Harvard University. It is based on Jack Minardi's (jack@minardi.org) codebase (https://github.com/jminardi/mecode) which is not maintained anymore.
 
 [2]: http://lewisgroup.seas.harvard.edu/
