@@ -328,7 +328,7 @@ class TestG(TestGFixture):
         with self.assertRaises(RuntimeError):
             self.g.arc()
 
-        self.g.arc(x=10, y=0)
+        self.g.arc(x=10, y=0, linearize=False)
         self.expect_cmd("""
         G17
         G2 X10.000000 Y0.000000 R5.000000
@@ -336,7 +336,7 @@ class TestG(TestGFixture):
         self.assert_output()
         self.assert_position({'x': 10, 'y': 0, 'z': 0})
 
-        self.g.arc(x=5, A=0, direction='CCW', radius=5)
+        self.g.arc(x=5, A=0, direction='CCW', radius=5, linearize=False)
         self.expect_cmd("""
         G16 X Y A
         G18
@@ -345,7 +345,7 @@ class TestG(TestGFixture):
         self.assert_output()
         self.assert_position({'x': 15, 'y': 0, 'A': 0, 'z': 0})
 
-        self.g.arc(x=0, y=10, helix_dim='D', helix_len=10)
+        self.g.arc(x=0, y=10, helix_dim='D', helix_len=10, linearize=False)
         self.expect_cmd("""
         G16 X Y D
         G17
@@ -354,7 +354,7 @@ class TestG(TestGFixture):
         self.assert_output()
         self.assert_position({'x': 15, 'y': 10, 'A': 0, 'D': 10, 'z': 0})
 
-        self.g.arc(0, 10, helix_dim='D', helix_len=10)
+        self.g.arc(0, 10, helix_dim='D', helix_len=10, linearize=False)
         self.expect_cmd("""
         G16 X Y D
         G17
@@ -364,7 +364,7 @@ class TestG(TestGFixture):
         self.assert_position({'x': 15, 'y': 20, 'A': 0, 'D': 20, 'z': 0})
 
         with self.assertRaises(RuntimeError):
-            self.g.arc(x=10, y=10, radius=1)
+            self.g.arc(x=10, y=10, radius=1, linearize=False)
 
     def test_abs_arc(self):
         self.g.relative()
