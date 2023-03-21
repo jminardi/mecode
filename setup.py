@@ -2,7 +2,7 @@ from os import path
 from setuptools import setup, find_packages
 
 INFO = {'name': 'mecode',
-        'version': '0.4.2',
+        'version': '0.4.3',
         'description': 'Simple GCode generator',
         'author': 'Rodrigo Telles',
         'author_email': 'rtelles@g.harvard.edu',
