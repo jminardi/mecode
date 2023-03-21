@@ -1869,7 +1869,6 @@ class G(object):
                 if extruding_state:
                     if color_on:
                         # ax.plot(X, Y, Z,color = cm.gray(self.color_history[index])[:-1])
-                        print(self.color_history[index])
                         ax.plot(X, Y, Z,color = self.color_history[index])
                     else:
                         ax.plot(X, Y, Z,'b')
