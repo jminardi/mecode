@@ -133,10 +133,17 @@ visualization. An easy way to install them is to use [conda][1].
 
 TODO
 ----
-* add pressure box comport to `__init__()` method
-* build out multi-nozzle support
-    * include multi-nozzle support in view method.
-* factor out aerotech specific methods into their own class
+
+- [ ] add pressure box comport to `__init__()` method
+- [ ] build out multi-nozzle support
+    - [ ] include multi-nozzle support in view method.
+- [ ] factor out aerotech specific methods into their own class
+- [ ] auto set MFO=100% before each print
+- [ ] add ability to read current status of aerotech
+  - [ ] turn off omnicure after aborted runs
+- [ ] add formal sphinx documentation
+- [ ] create github page
+
 
 Credits
 -------
