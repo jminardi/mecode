@@ -446,8 +446,47 @@ class G(object):
             self.move(E = -retraction)
             self.extrude = True
 
+    def circle(self, radius, center=None,  direction='CW', linearize=True, **kwargs):
+        """ Generates a circle starting from the current position if center is None,
+        otherwise from center.
+
+        Parameters
+        ----------
+        direction : str (either 'CW' or 'CCW') (default: 'CW')
+            The direction to execute the arc in.
+        radius : float
+            The radius of the circle.
+        center : (float, float)
+            The center coordinates of the circle
+        linearize : Bool (default: True)
+            Represent the arc of the circle as a series of straight lines.
+
+        Examples
+        --------
+        TODO: updates these 
+        >>> # arc 10 mm up in y and 10 mm over in x with a radius of 20.
+        >>> g.arc(x=10, y=10, radius=20)
+
+        >>> # move 10 mm up on the A axis, arcing through y with a radius of 20
+        >>> g.arc(A=10, y=0, radius=20)
+
+        >>> # arc through x and y while moving linearly on axis A
+        >>> g.arc(x=10, y=10, radius=50, helix_dim='A', helix_len=5)
+
+        """
+        if direction == 'CW':
+            self.arc(x=radius, y=radius, radius=radius, direction='CW', **kwargs)
+            self.arc(x=radius, y=-radius, radius=radius, direction='CW', **kwargs)
+            self.arc(x=-radius, y=-radius, radius=radius, direction='CW', **kwargs)
+            self.arc(x=-radius, y=radius, radius=radius, direction='CW', **kwargs)
+        elif direction == 'CCW':
+            self.arc(x=-radius, y=radius, radius=radius, direction='CCW', **kwargs)
+            self.arc(x=-radius, y=-radius, radius=radius, direction='CCW', **kwargs)
+            self.arc(x=radius, y=-radius, radius=radius, direction='CCW', **kwargs)
+            self.arc(x=radius, y=radius, radius=radius, direction='CCW', **kwargs)
+
     def arc(self, x=None, y=None, z=None, direction='CW', radius='auto',
-            helix_dim=None, helix_len=0, linearize=True, **kwargs):
+            helix_dim=None, helix_len=0, linearize=True, color=(0,1,0,0.5), **kwargs):
         """ Arc to the given point with the given radius and in the given
         direction. If helix_dim and helix_len are specified then the tool head
         will also perform a linear movement through the given dimension while
@@ -608,7 +647,7 @@ class G(object):
             
             for i in range(len(segments)-1):
                 move_line = segments[i+1]-segments[i]
-                self.move(*move_line.tolist()[0])
+                self.move(*move_line.tolist()[0], color=color)
         else:
             #Standard output
             if axis is not None:
