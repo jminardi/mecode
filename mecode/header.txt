@@ -13,5 +13,5 @@ $DO3.0=0
 
 Primary ; sets primary units mm and s
 G65 F2000; accel speed mm/s^2
-G66 F2000;accel speed mm/s^2
+G66 F2000; decel speed mm/s^2
 
