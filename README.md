@@ -1,7 +1,7 @@
 Mecode
 ======
-
-[![Build Status](https://travis-ci.org/jminardi/mecode.svg?branch=master)](https://travis-ci.org/jminardi/mecode)
+  `
+[![Unit Tests](https://github.com/rtellez700/mecode/actions/workflows/python-package.yml/badge.svg)](https://github.com/rtellez700/mecode/actions/workflows/python-package.yml)
 
 ### GCode for all
 
@@ -128,16 +128,16 @@ rename it.
 Installation
 ------------
 
-The easiest method to install mecode is with pip:
+*Outdated* The easiest method to install mecode is with pip:
 
 ```bash
-sudo pip install mecode
+pip install git+https://github.com/rtellez700/mecode.git
 ```
 
 To install from source:
 
 ```bash
-$ git clone https://github.com/jminardi/mecode.git
+$ git clone https://github.com/rtellez700/mecode.git
 $ cd mecode
 $ pip install -r requirements.txt
 $ python setup.py install
@@ -146,25 +146,31 @@ $ python setup.py install
 Optional Dependencies
 ---------------------
 The following dependencies are optional, and are only needed for
-visualization. An easy way to install them is to use
-[Canopy][0] or [conda][1].
+visualization. An easy way to install them is to use [conda][1].
 
 * numpy
-* mayavi
 * matplotlib
+* vpython
+* mayavi
 
-[0]: https://www.enthought.com/products/canopy/
-[1]: https://store.continuum.io/cshop/anaconda/
+[1]: https://www.anaconda.com/
 
 TODO
 ----
-* add pressure box comport to `__init__()` method
-* build out multi-nozzle support
-    * include multi-nozzle support in view method.
-* factor out aerotech specific methods into their own class
+
+- [ ] add pressure box comport to `__init__()` method
+- [ ] build out multi-nozzle support
+    - [ ] include multi-nozzle support in view method.
+- [ ] factor out aerotech specific methods into their own class
+- [ ] auto set MFO=100% before each print
+- [ ] add ability to read current status of aerotech
+  - [ ] turn off omnicure after aborted runs
+- [ ] add formal sphinx documentation
+- [ ] create github page
+
 
 Credits
 -------
-This software was developed by the [Lewis Lab][2] at Harvard University.
+This software was developed by the [Lewis Lab][2] at Harvard University. It is based on Jack Minardi's (jack@minardi.org) codebase (https://github.com/jminardi/mecode) which is not maintained anymore.
 
 [2]: http://lewisgroup.seas.harvard.edu/

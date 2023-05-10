@@ -38,8 +38,9 @@ class EFDPicoPulse(object):
     def set_valve_mode(self, mode):
         """Set valve mode to Timed, Purge, Continous, or read current mode.
 
-    Keyword argument:
-    mode -- 1 = Timed; 2 = Purge; 3 = Continuous; 5 = read current mode """
+        Keyword argument:
+        mode -- 1 = Timed; 2 = Purge; 3 = Continuous; 5 = read current mode """
+        
         return self.send(str(mode) + 'drv1')
 
     def set_dispense_count(self, count):
