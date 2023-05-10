@@ -90,10 +90,10 @@ class TestGMatrix(TestGFixture):
         self.assert_almost_position({'x': 1.0, 'y': 0, 'z': 2})        
 
         self.expect_cmd("""
-        G90 ; absolute 
+        G90 ; absolute
         G1 X-1.000000 Y0.000000 Z0.000000
         G91 ; relative
-        G90 ; absolute 
+        G90 ; absolute
         G1 X-1.000000 Y0.000000 Z2.000000
         G91 ; relative
         """)
@@ -106,10 +106,10 @@ class TestGMatrix(TestGFixture):
         self.g.abs_move(z=2)
         self.assert_almost_position({'x': 1.0, 'y': 0, 'z': 2})        
         self.expect_cmd("""
-        G90 ; absolute  
+        G90 ; absolute
         G1 X0.000000 Y1.000000 Z0.000000
         G91 ; relative
-        G90 ; absolute 
+        G90 ; absolute
         G1 X0.000000 Y1.000000 Z2.000000
         G91 ; relative
         """)
