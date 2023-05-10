@@ -446,7 +446,7 @@ class G(object):
             self.move(E = -retraction)
             self.extrude = True
 
-    def circle(self, radius, center=None,  direction='CW', linearize=True, **kwargs):
+    def circle(self, radius, center=None,  direction='CW', linearize=False, **kwargs):
         """ Generates a circle starting from the current position if center is None,
         otherwise from center.
 
@@ -458,7 +458,7 @@ class G(object):
             The radius of the circle.
         center : (float, float)
             The center coordinates of the circle
-        linearize : Bool (default: True)
+        linearize : Bool (default: False)
             Represent the arc of the circle as a series of straight lines.
 
         Examples
@@ -486,7 +486,7 @@ class G(object):
             self.arc(x=radius, y=radius, radius=radius, direction='CCW', **kwargs)
 
     def arc(self, x=None, y=None, z=None, direction='CW', radius='auto',
-            helix_dim=None, helix_len=0, linearize=True, color=(0,1,0,0.5), **kwargs):
+            helix_dim=None, helix_len=0, linearize=False, color=(0,1,0,0.5), **kwargs):
         """ Arc to the given point with the given radius and in the given
         direction. If helix_dim and helix_len are specified then the tool head
         will also perform a linear movement through the given dimension while
@@ -507,7 +507,7 @@ class G(object):
             The linear dimension to complete the helix through
         helix_len : float
             The length to move in the linear helix dimension.
-        linearize : Bool (default: True)
+        linearize : Bool (default: False)
             Represent the arc as a series of straight lines.
 
         Examples
@@ -815,7 +815,7 @@ class G(object):
                 self.move(y=-y)
                 self.move(x=x)
 
-    def round_rect(self, x, y, direction='CW', start='LL', radius=0, linearize=True):
+    def round_rect(self, x, y, direction='CW', start='LL', radius=0, linearize=False):
         """ Trace a rectangle with the given width and height with rounded corners,
             note that starting point is not actually in corner of rectangle.
 
