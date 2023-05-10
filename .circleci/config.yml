@@ -1,7 +1,7 @@
 version: 2.1
 orbs:
   # https://circleci.com/developer/orbs/orb/circleci/python
-  python: circleci/python@1.5.0
+  python: circleci/python@2.1.1
 jobs:
   test: # This is the name of the job, feel free to change it to better match what you're trying to do!
     parameters:
@@ -10,9 +10,21 @@ jobs:
     docker:
       - image: cimg/python:<< parameters.python-version >>
     steps:
+      - when: # for python >= 3, upgrade pip all the way
+          condition:
+            not:
+              equal: [ "2.7", << parameters.python-version >> ]
+          steps:
+            - python/install-packages:
+                args: --upgrade pip
+                pkg-manager: pip
+                pip-dependency-file: /dev/null
+                cache-version: "{{ .Environment.CACHE_VERSION }}"
       - checkout
       - python/install-packages:
           pkg-manager: pip
+          pip-dependency-file: requirements.txt
+          cache-version: "{{ .Environment.CACHE_VERSION }}"
       - python/install-packages:
           pkg-manager: pip
           pip-dependency-file: requirements.dev.txt
@@ -22,7 +34,6 @@ jobs:
 
 workflows:
   ci: # This is the name of the workflow, feel free to change it to better match your workflow.
-    # Inside the workflow, you define the jobs you want to run.
     jobs:
       - test:
           matrix:
