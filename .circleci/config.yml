@@ -4,14 +4,11 @@ orbs:
   python: circleci/python@1.5.0
 jobs:
   test: # This is the name of the job, feel free to change it to better match what you're trying to do!
+    parameters:
+      python-version:
+        type: string
     docker:
-      - image: cimg/python:2.7
-      - image: cimg/python:3.5
-      - image: cimg/python:3.6
-      - image: cimg/python:3.7
-      - image: cimg/python:3.8
-      - image: cimg/python:3.9
-      - image: cimg/python:3.10
+      - image: cimg/python:<< parameters.python-version >>
     steps:
       - checkout
       - python/install-packages:
@@ -27,4 +24,14 @@ workflows:
   ci: # This is the name of the workflow, feel free to change it to better match your workflow.
     # Inside the workflow, you define the jobs you want to run.
     jobs:
-      - test
+      - test:
+          matrix:
+            parameters:
+              python-version:
+                - "2.7"
+                - "3.5"
+                - "3.6"
+                - "3.7"
+                - "3.8"
+                - "3.9"
+                - "3.10"
