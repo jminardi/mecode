@@ -596,9 +596,9 @@ class G(object):
             b_length = math.sqrt(radius**2-(dist/2)**2)
             b_vect = b_length*perp_vect_dir
             c_vect = a_vect+b_vect
-            center_coords = np.array(cp[k[:2]])+c_vect
-            final_pos = np.array(cp[k[:2]])+a_vect*2-c_vect
-            initial_pos = np.array(cp[k[:2]])
+            initial_pos = np.array((cp[k[0]],cp[k[1]]))
+            center_coords = initial_pos+c_vect
+            final_pos = initial_pos+a_vect*2-c_vect
 
         #extrude feature implementation
         # only designed for flow calculations in x-y plane
