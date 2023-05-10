@@ -1905,7 +1905,7 @@ class G(object):
         """
         extruding_hist = dict(self.extruding_history)
         position_hist = self.position_history
-        cut_ranges=[*extruding_hist][1:]
+        cut_ranges=list(extruding_hist)[1:]
         final_coords = []
         for i in range(0,len(cut_ranges),2):
             final_coords.append(position_hist[cut_ranges[i]-1:cut_ranges[i+1]])
