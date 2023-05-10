@@ -1,5 +1,6 @@
 numpy
 solidpython<0.3
 matplotlib<3.0
-vpython<7.6
+vpython<7.6;python_version<"3"
+vpython>=7.6;python_version>="3"
 pyserial
