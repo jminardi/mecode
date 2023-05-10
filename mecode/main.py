@@ -554,51 +554,18 @@ class G(object):
         elif direction == 'CCW':
             command = 'G3'
 
-        values = [v for v in dims.values()]
         if self.is_relative:
-            dist = math.sqrt(values[0] ** 2 + values[1] ** 2)
-            if radius == 'auto':
-                radius = dist / 2.0
-            elif abs(radius) < dist / 2.0:
-                msg = 'Radius {} to small for distance {}'.format(radius, dist)
-                raise RuntimeError(msg)
-            vect_dir= [values[0]/dist,values[1]/dist]
-            if direction == 'CW':
-                arc_rotation_matrix = np.matrix([[0, -1],[1, 0]])
-            elif direction =='CCW':
-                arc_rotation_matrix = np.matrix([[0, 1],[-1, 0]])
-            perp_vect_dir = np.array(vect_dir)*arc_rotation_matrix
-            a_vect= np.array([values[0]/2,values[1]/2])
-            b_length = math.sqrt(radius**2-(dist/2)**2)
-            b_vect = b_length*perp_vect_dir
-            c_vect = a_vect+b_vect
-            center_coords = c_vect
-            final_pos = a_vect*2-c_vect 
-            initial_pos = -c_vect
+            values = [v for v in dims.values()]
         else:
-            k = [ky for ky in dims.keys()]
             cp = self._current_position
-            dist = math.sqrt(
-                (cp[k[0]] - values[0]) ** 2 + (cp[k[1]] - values[1]) ** 2
-            )
-            if radius == 'auto':
-                radius = dist / 2.0
-            elif abs(radius) < dist / 2.0:
-                msg = 'Radius {} to small for distance {}'.format(radius, dist)
-                raise RuntimeError(msg)
-            vect_dir= [(values[0]-cp[k[0]])/dist,(values[1]-cp[k[1]])/dist]
-            if direction == 'CW':
-                arc_rotation_matrix = np.matrix([[0, -1],[1, 0]])
-            elif direction =='CCW':
-                arc_rotation_matrix = np.matrix([[0, 1],[-1, 0]])
-            perp_vect_dir = np.array(vect_dir)*arc_rotation_matrix
-            a_vect = np.array([(values[0]-cp[k[0]])/2.0,(values[1]-cp[k[1]])/2.0])
-            b_length = math.sqrt(radius**2-(dist/2)**2)
-            b_vect = b_length*perp_vect_dir
-            c_vect = a_vect+b_vect
-            initial_pos = np.array((cp[k[0]],cp[k[1]]))
-            center_coords = initial_pos+c_vect
-            final_pos = initial_pos+a_vect*2-c_vect
+            values = [cp[k] - v for k, v in dims.items()]
+
+        dist = math.sqrt(values[0] ** 2 + values[1] ** 2)
+        if radius == 'auto':
+            radius = dist / 2.0
+        elif abs(radius) < dist / 2.0:
+            msg = 'Radius {} to small for distance {}'.format(radius, dist)
+            raise RuntimeError(msg)
 
         #extrude feature implementation
         # only designed for flow calculations in x-y plane
@@ -623,15 +590,32 @@ class G(object):
 
         if linearize:
             #Curved formed from straight lines
-            final_pos = np.array(final_pos.tolist()).flatten()
-            initial_pos = np.array(initial_pos.tolist()).flatten()
-            final_angle = np.arctan2(final_pos[1],final_pos[0])
-            initial_angle = np.arctan2(initial_pos[1],initial_pos[0])
-            
-            if direction == 'CW':
-                angle_difference = 2*np.pi-(final_angle-initial_angle)%(2*np.pi)
-            elif direction == 'CCW':
-                angle_difference = (initial_angle-final_angle)%(-2*np.pi)
+            if dist > 0:
+                vect_dir= [values[0]/dist,values[1]/dist]
+                if direction == 'CW':
+                    arc_rotation_matrix = np.matrix([[0, -1],[1, 0]])
+                elif direction =='CCW':
+                    arc_rotation_matrix = np.matrix([[0, 1],[-1, 0]])
+                perp_vect_dir = np.array(vect_dir)*arc_rotation_matrix
+                a_vect= np.array([values[0]/2,values[1]/2])
+                b_length = math.sqrt(radius**2-(dist/2)**2)
+                b_vect = b_length*perp_vect_dir
+                c_vect = a_vect+b_vect
+                center_coords = c_vect
+                final_pos = a_vect*2-c_vect
+                initial_pos = -c_vect
+
+                final_pos = np.array(final_pos.tolist()).flatten()
+                initial_pos = np.array(initial_pos.tolist()).flatten()
+                final_angle = np.arctan2(final_pos[1],final_pos[0])
+                initial_angle = np.arctan2(initial_pos[1],initial_pos[0])
+
+                if direction == 'CW':
+                    angle_difference = 2*np.pi-(final_angle-initial_angle)%(2*np.pi)
+                elif direction == 'CCW':
+                    angle_difference = (initial_angle-final_angle)%(-2*np.pi)
+            else:
+                angle_difference = 0
 
             step_range = [0, angle_difference]
             step_size = np.pi/16
