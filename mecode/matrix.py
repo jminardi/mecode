@@ -2,7 +2,7 @@
 import math
 import copy
 import numpy as np
-from mecode.main import G
+from mecode import G
 
 class GMatrix(G):
     """This class passes points through a 2D transformation matrix before
